@@ -97,6 +97,8 @@ public sealed class DiagnosticReportBuilder
         sb.AppendLine($"清单文件      : {_library.ManifestPath}");
         sb.AppendLine($"清单版本      : {_library.Manifest.LibraryVersion}");
         sb.AppendLine($"使用内置资源  : {_library.UsingEmbeddedManifest}");
+        sb.AppendLine($"本机分发策略  : {_library.Policy.Describe()}");
+        sb.AppendLine($"策略文件      : {_library.Policy.FilePath}");
         sb.AppendLine();
 
         var status = _library.GetStatus(DriverMatchEngine.CurrentArchitecture);

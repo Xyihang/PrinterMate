@@ -16,7 +16,7 @@ internal sealed class StubWppDetector(bool enabled) : WppModeDetector
 
 public class DriverCatalogTests
 {
-    private static DriverLibrary Library => DriverLibrary.Load();
+    private static DriverLibrary Library => DriverLibrary.Load(policy: TestPolicies.Isolated());
 
     [Fact]
     public void 内置清单_应包含全部目标品牌()
@@ -166,7 +166,7 @@ internal sealed class SandboxLibrary : IDisposable
 
         File.WriteAllText(Path.Combine(root, "Catalog", "drivers.json"), manifest);
 
-        var library = DriverLibrary.Load(root);
+        var library = DriverLibrary.Load(root, TestPolicies.Isolated());
         return new SandboxLibrary(root, library, library.Entries.Single());
     }
 
@@ -188,7 +188,7 @@ internal sealed class SandboxLibrary : IDisposable
 
 public class CatalogMatcherTests
 {
-    private static DriverLibrary Library => DriverLibrary.Load();
+    private static DriverLibrary Library => DriverLibrary.Load(policy: TestPolicies.Isolated());
 
     [Theory]
     [InlineData("HP LaserJet Pro M404dn", "HP LASERJET PRO M404DN")]
@@ -282,7 +282,7 @@ public class CatalogMatcherTests
 
 public class DriverMatchEngineTests
 {
-    private static DriverMatchEngine Engine(bool wpp = false) => new(DriverLibrary.Load(), new StubWppDetector(wpp));
+    private static DriverMatchEngine Engine(bool wpp = false) => new(DriverLibrary.Load(policy: TestPolicies.Isolated()), new StubWppDetector(wpp));
 
     private static DiscoveredPrinter IppMopriaPrinter() => new()
     {

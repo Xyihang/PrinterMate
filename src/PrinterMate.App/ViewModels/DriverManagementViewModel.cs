@@ -90,14 +90,63 @@ public sealed class BrandSummaryRow
     public string SummaryText => $"共 {Total} 条,可用 {Ready} 条,不可用 {Unavailable} 条";
 }
 
+/// <summary>品牌维度:本机是否允许使用该品牌的内置驱动。</summary>
+public sealed class BrandPolicyRow : ObservableObject
+{
+    private readonly Action<string, bool> _onChanged;
+    private bool _isBuiltinAllowed;
+
+    public BrandPolicyRow(string brand, string summaryText, bool isBuiltinAllowed, Action<string, bool> onChanged)
+    {
+        Brand = brand;
+        SummaryText = summaryText;
+        _isBuiltinAllowed = isBuiltinAllowed;
+        _onChanged = onChanged;
+    }
+
+    public string Brand { get; }
+
+    public string SummaryText { get; }
+
+    public bool IsBuiltinAllowed
+    {
+        get => _isBuiltinAllowed;
+        set
+        {
+            if (SetProperty(ref _isBuiltinAllowed, value))
+            {
+                _onChanged(Brand, value);
+            }
+        }
+    }
+
+    /// <summary>只更新界面状态,不回调(用于把复选框还原成真实策略,避免递归弹窗)。</summary>
+    public void SetSilently(bool value)
+    {
+        if (_isBuiltinAllowed == value)
+        {
+            return;
+        }
+
+        _isBuiltinAllowed = value;
+        OnPropertyChanged(nameof(IsBuiltinAllowed));
+    }
+}
+
 /// <summary>驱动管理页。</summary>
 public sealed class DriverManagementViewModel : ObservableObject, IActivatable
 {
     private const string AllBrands = "全部品牌";
 
+    /// <summary>开启内置厂商驱动时记录的声明文本,会写入本机策略文件与审计日志。</summary>
+    private const string DisclosureText = "使用者声明:本机个人使用,不对外分发本软件与驱动包。";
+
     private readonly AppServices _services;
 
     private bool _isBusy;
+    private bool _suppressPolicyCallback;
+    private bool _allowAllBuiltin;
+
     private string _keyword = string.Empty;
     private string _brandFilter = AllBrands;
     private DriverCandidate? _selectedManualCandidate;
@@ -118,6 +167,32 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
     public ObservableCollection<DriverBrandGroup> BrandGroups { get; } = new();
 
     public ObservableCollection<BrandSummaryRow> BrandSummaries { get; } = new();
+
+    public ObservableCollection<BrandPolicyRow> BrandPolicies { get; } = new();
+
+    public string PolicyHint =>
+        "清单里的「可再分发」是发行方的红线,默认关闭。若你只在本机自己使用、不把本软件和驱动包发给别人,"
+        + "可以在这里显式开启某品牌的内置驱动。开启只影响「是否允许从本地驱动库安装」，"
+        + "驱动包仍然必须通过 SHA256 与 .cat 数字签名校验,校验不会因此放宽。";
+
+    public string PolicySummary { get; private set; } = "-";
+
+    public bool HasBrandPolicies => BrandPolicies.Count > 0;
+
+    /// <summary>全局开关:开启后所有品牌的内置驱动都可在本机安装。</summary>
+    public bool AllowAllBuiltinDrivers
+    {
+        get => _allowAllBuiltin;
+        set
+        {
+            if (!SetProperty(ref _allowAllBuiltin, value) || _suppressPolicyCallback)
+            {
+                return;
+            }
+
+            ApplyGlobalPolicy(value);
+        }
+    }
 
     public ObservableCollection<string> MissingPackages { get; } = new();
 
@@ -217,6 +292,142 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
 
     private void LoadLibrary()
     {
+        LoadPolicyRows();
+        RefreshAvailability();
+    }
+
+    /// <summary>刷新品牌维度的内置驱动许可开关。</summary>
+    private void LoadPolicyRows()
+    {
+        BrandPolicies.Clear();
+
+        var library = _services.Library;
+        if (library is null)
+        {
+            PolicySummary = "内置驱动库不可用,无法调整内置驱动策略。";
+            _suppressPolicyCallback = true;
+            AllowAllBuiltinDrivers = false;
+            _suppressPolicyCallback = false;
+            OnPropertyChanged(nameof(PolicySummary));
+            OnPropertyChanged(nameof(HasBrandPolicies));
+            return;
+        }
+
+        foreach (var brand in library.Brands)
+        {
+            var entries = library.ForBrand(brand);
+            var summary = entries.All(e => e.IsInboxDriver)
+                ? "系统内置类驱动,无需授权开关"
+                : $"共 {entries.Count} 条,清单标记可再分发 {entries.Count(e => e.Redistributable)} 条";
+
+            BrandPolicies.Add(new BrandPolicyRow(brand, summary, library.Policy.IsEnabled(brand), ToggleBrandPolicy));
+        }
+
+        PolicySummary = library.Policy.Describe();
+        _suppressPolicyCallback = true;
+        AllowAllBuiltinDrivers = library.Policy.AllowsAll;
+        _suppressPolicyCallback = false;
+
+        OnPropertyChanged(nameof(PolicySummary));
+        OnPropertyChanged(nameof(HasBrandPolicies));
+    }
+
+    private void ApplyGlobalPolicy(bool enabled)
+    {
+        var library = _services.Library;
+        if (library is null)
+        {
+            RevertPolicyToggle(enabled);
+            return;
+        }
+
+        if (!ConfirmPolicyChange(enabled, "全部品牌"))
+        {
+            RevertPolicyToggle(enabled);
+            return;
+        }
+
+        library.Policy.SetAll(enabled, enabled ? DisclosureText : string.Empty);
+        ReportPolicyChange(enabled, "全部品牌");
+        LoadLibrary();
+    }
+
+    private void ToggleBrandPolicy(string brand, bool enabled)
+    {
+        var library = _services.Library;
+        if (library is null)
+        {
+            return;
+        }
+
+        if (!ConfirmPolicyChange(enabled, brand))
+        {
+            SyncPolicyRowsFromStore();
+            return;
+        }
+
+        library.SetBrandDistribution(brand, enabled, enabled ? DisclosureText : string.Empty);
+        ReportPolicyChange(enabled, brand);
+        SyncPolicyRowsFromStore();
+        RefreshAvailability();
+    }
+
+    /// <summary>用户取消时把复选框状态还原(静默,避免再次弹确认框)。</summary>
+    private void RevertPolicyToggle(bool attempted)
+    {
+        _suppressPolicyCallback = true;
+        AllowAllBuiltinDrivers = !attempted;
+        _suppressPolicyCallback = false;
+    }
+
+    private void SyncPolicyRowsFromStore()
+    {
+        var library = _services.Library;
+        if (library is null)
+        {
+            return;
+        }
+
+        foreach (var row in BrandPolicies)
+        {
+            row.SetSilently(library.Policy.IsEnabled(row.Brand));
+        }
+
+        PolicySummary = library.Policy.Describe();
+        OnPropertyChanged(nameof(PolicySummary));
+    }
+
+    private bool ConfirmPolicyChange(bool enabling, string scope) => _services.Dialogs.Confirm(
+        enabling ? "确认开启内置驱动" : "确认关闭内置驱动",
+        enabling
+            ? $"即将为「{scope}」开启内置驱动安装许可。\n\n{PolicyHint}\n\n{DisclosureText}\n\n是否继续?"
+            : $"即将为「{scope}」关闭内置驱动安装许可。关闭后该品牌只能改用厂商官方在线源。\n\n是否继续?",
+        enabling ? "我确认,开启" : "确认关闭",
+        "取消");
+
+    private void ReportPolicyChange(bool enabled, string scope)
+    {
+        var path = _services.Library?.Policy.FilePath ?? "-";
+        AppLog.Write("distribution-policy", $"{scope} -> {enabled}; {DisclosureText}; 策略文件={path}");
+
+        if (enabled)
+        {
+            StatusHub.Success(
+                "内置驱动许可",
+                $"已为「{scope}」开启内置驱动安装许可。",
+                "若该品牌驱动包已入库,现在可以完全离线安装;签名与哈希校验仍然强制执行。");
+        }
+        else
+        {
+            StatusHub.Warn(
+                "内置驱动许可",
+                $"已为「{scope}」关闭内置驱动安装许可。",
+                "该品牌将改用厂商官方在线源下载驱动。");
+        }
+    }
+
+    private void RefreshAvailability()
+    {
         BrandGroups.Clear();
         BrandSummaries.Clear();
         MissingPackages.Clear();
@@ -288,6 +499,9 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         OnPropertyChanged(nameof(HasMissingPackages));
         OnPropertyChanged(nameof(MissingHeader));
         OnPropertyChanged(nameof(Brands));
+        OnPropertyChanged(nameof(PolicySummary));
+        OnPropertyChanged(nameof(HasBrandPolicies));
+        OnPropertyChanged(nameof(AllowAllBuiltinDrivers));
     }
 
     private async Task SearchCandidatesAsync()

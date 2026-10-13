@@ -20,7 +20,8 @@ public sealed record DriverLibraryStatus(
     int PackagedEntries,
     int ReadyEntries,
     IReadOnlyList<string> Brands,
-    IReadOnlyList<string> MissingPackages)
+    IReadOnlyList<string> MissingPackages,
+    string DistributionSummary)
 {
     public bool HasAnyPackagedDriver => ReadyEntries > 0;
 }
@@ -41,12 +42,13 @@ public sealed class DriverLibrary
         AllowTrailingCommas = true,
     };
 
-    private DriverLibrary(string root, string manifestPath, DriverManifest manifest, bool embedded)
+    private DriverLibrary(string root, string manifestPath, DriverManifest manifest, bool embedded, DistributionPolicy policy)
     {
         Root = root;
         ManifestPath = manifestPath;
         Manifest = manifest;
         UsingEmbeddedManifest = embedded;
+        Policy = policy;
         Entries = manifest.Entries
             .OrderByDescending(e => e.Priority)
             .ThenBy(e => e.Brand, StringComparer.OrdinalIgnoreCase)
@@ -62,10 +64,14 @@ public sealed class DriverLibrary
 
     public bool UsingEmbeddedManifest { get; }
 
+    /// <summary>本机驱动分发策略(清单红线之上的本机声明)。</summary>
+    public DistributionPolicy Policy { get; }
+
     public IReadOnlyList<DriverCatalogEntry> Entries { get; }
 
-    public static DriverLibrary Load(string? rootOverride = null)
+    public static DriverLibrary Load(string? rootOverride = null, DistributionPolicy? policy = null)
     {
+        policy ??= DistributionPolicy.Default;
         var root = rootOverride ?? ResolveDefaultRoot();
 
         var candidates = new[]
@@ -86,7 +92,7 @@ public sealed class DriverLibrary
                 var manifest = JsonSerializer.Deserialize<DriverManifest>(File.ReadAllText(candidate), Options);
                 if (manifest is { Entries.Count: > 0 })
                 {
-                    return new DriverLibrary(root, candidate, manifest, embedded: false);
+                    return new DriverLibrary(root, candidate, manifest, embedded: false, policy);
                 }
             }
             catch (JsonException)
@@ -96,7 +102,7 @@ public sealed class DriverLibrary
         }
 
         var embeddedManifest = LoadEmbedded();
-        return new DriverLibrary(root, $"(内置资源) {EmbeddedManifestName}", embeddedManifest, embedded: true);
+        return new DriverLibrary(root, $"(内置资源) {EmbeddedManifestName}", embeddedManifest, embedded: true, policy);
     }
 
     /// <summary>按优先级查找默认根目录:环境变量 → 用户目录(在线更新) → 程序目录 → 开发目录。</summary>
@@ -144,6 +150,14 @@ public sealed class DriverLibrary
     public IReadOnlyList<string> Brands
         => Entries.Select(e => e.Brand).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(b => b, StringComparer.OrdinalIgnoreCase).ToList();
 
+    /// <summary>该条目在本机是否允许从内置驱动库安装(清单红线 或 本机声明)。</summary>
+    public bool IsDistributionAllowed(DriverCatalogEntry entry)
+        => entry.Redistributable || Policy.IsEnabled(entry.Brand);
+
+    /// <summary>开启/关闭某品牌在本机的内置驱动安装许可,并记录使用者声明。</summary>
+    public void SetBrandDistribution(string brand, bool enabled, string acknowledgement)
+        => Policy.SetBrand(brand, enabled, acknowledgement);
+
     /// <summary>判断某条驱动在当前架构下能否直接本地安装。</summary>
     public DriverAvailability CheckAvailability(DriverCatalogEntry entry, string arch, string? os = null)
     {
@@ -162,9 +176,11 @@ public sealed class DriverLibrary
             return DriverAvailability.No($"该驱动不适用于当前系统版本({os})。");
         }
 
-        if (!entry.Redistributable)
+        if (!IsDistributionAllowed(entry))
         {
-            return DriverAvailability.No($"品牌 {entry.Brand} 的驱动再分发授权尚未确认,程序禁止从本地安装,将改用官方在线源。");
+            return DriverAvailability.No(
+                $"品牌 {entry.Brand} 的驱动再分发授权尚未确认(清单 redistributable=false),程序禁止从本地安装,将改用官方在线源。"
+                + "若你仅在本机个人使用、不对外分发本软件,可在「驱动管理」页开启该品牌的内置驱动。");
         }
 
         var inf = ResolveInfPath(entry);
@@ -248,7 +264,8 @@ public sealed class DriverLibrary
             packaged,
             ready,
             Brands,
-            missing);
+            missing,
+            Policy.Describe());
     }
 
     private static DriverManifest LoadEmbedded()

@@ -35,6 +35,32 @@
                 </StackPanel>
             </Border>
 
+            <TextBlock Style="{StaticResource SectionHeader}" Text="内置驱动许可(本机授权开关)"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding PolicyHint}" TextWrapping="Wrap" Foreground="#FF666666"/>
+                    <TextBlock Margin="0,6,0,0" Text="{Binding PolicySummary, StringFormat=当前策略:{0}}" TextWrapping="Wrap" FontWeight="Bold"/>
+
+                    <CheckBox Margin="0,8,0,0"
+                              Content="允许全部品牌使用内置驱动(仅本机个人使用)"
+                              IsChecked="{Binding AllowAllBuiltinDrivers}"/>
+
+                    <TextBlock Margin="0,8,0,2" Text="按品牌单独设置(优先级高于上面的全局开关):"/>
+                    <DataGrid ItemsSource="{Binding BrandPolicies}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              HeadersVisibility="Column"
+                              MaxHeight="240"
+                              Visibility="{Binding HasBrandPolicies, Converter={StaticResource BoolToVisibility}}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="品牌" Binding="{Binding Brand}" Width="160" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="清单情况" Binding="{Binding SummaryText}" Width="*" IsReadOnly="True"/>
+                            <DataGridCheckBoxColumn Header="允许内置驱动" Binding="{Binding IsBuiltinAllowed, UpdateSourceTrigger=PropertyChanged}" Width="130"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
             <TextBlock Style="{StaticResource SectionHeader}" Text="各品牌可用性统计"/>
             <DataGrid ItemsSource="{Binding BrandSummaries}"
                       AutoGenerateColumns="False"
