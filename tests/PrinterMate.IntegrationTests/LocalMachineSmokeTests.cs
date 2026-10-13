@@ -231,6 +231,44 @@ public class LocalMachineSmokeTests
     }
 
     [Fact]
+    public async Task 微软更新目录检索_应能解析出驱动条目()
+    {
+        // 先探活,避免离线环境下把网络问题误判成解析失败
+        var reachable = true;
+        try
+        {
+            using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            var response = await probe.GetAsync("https://www.catalog.update.microsoft.com/Search.aspx?q=test");
+            reachable = response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            reachable = false;
+            _output.WriteLine($"Microsoft Update Catalog 不可达,跳过断言:{ex.Message}");
+        }
+
+        if (!reachable)
+        {
+            return;
+        }
+
+        var service = new OnlineDriverService();
+        var result = await service.SearchAsync("HP", "HP Deskjet 2520 series");
+
+        _output.WriteLine($"检索结果:{result.Message}");
+
+        Assert.True(result.IsSuccess, $"线上检索失败:{result.Message} / {result.Suggestion}");
+        Assert.NotEmpty(result.Value!);
+
+        foreach (var candidate in result.Value!.Take(5))
+        {
+            _output.WriteLine($"  {candidate.DisplayName}");
+            _output.WriteLine($"      版本={candidate.Version} 大小={candidate.Size}");
+            _output.WriteLine($"      {candidate.Note}");
+        }
+    }
+
+    [Fact]
     public void 白名单与审计日志_在本机可正常初始化()
     {
         var allowlist = DownloadSourceAllowlist.Default;

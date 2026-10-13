@@ -10,8 +10,13 @@ public class DownloadSourceAllowlistTests
     {
         var allowlist = DownloadSourceAllowlist.Default;
 
-        Assert.Equal(7, allowlist.MicrosoftDomains.Count);
+        // 不断死数量:白名单会随官方 CDN 增补,数量不是契约,
+        // 「功能上必需的域名在列表里」才是契约。
+        Assert.Contains("catalog.update.microsoft.com", allowlist.MicrosoftDomains);
         Assert.Contains("dl.delivery.mp.microsoft.com", allowlist.MicrosoftDomains);
+        // Microsoft Update Catalog 解析出的下载直链主机(2026-10 线上实测值)
+        Assert.Contains("catalog.s.download.windowsupdate.com", allowlist.MicrosoftDomains);
+        Assert.True(allowlist.MicrosoftDomains.Count >= 7);
         Assert.NotEmpty(allowlist.VendorDomains);
         Assert.Contains(allowlist.VendorDomains, v => v.Brand == "HP" && v.Domain == "hp.com");
     }

@@ -103,6 +103,42 @@ public class InfDriverNameParsingTests
         Assert.Empty(OnlineDriverInstaller.ReadDriverNamesFromInf(@"C:\definitely\not\here.inf"));
     }
 
+    [Fact]
+    public void 微软更新目录的CDN直链必须被白名单放行()
+    {
+        // 回归用例:实测 Microsoft Update Catalog 解析出的直链主机是
+        // catalog.s.download.windowsupdate.com。早期白名单里只有 download.microsoft.com
+        // 和 windowsupdate.microsoft.com,导致下载会被自己的安全策略拒绝。
+        var allowlist = PrinterMate.Security.DownloadSourceAllowlist.Default;
+
+        var real = allowlist.Check("https://catalog.s.download.windowsupdate.com/msdownload/update/driver/drvs/2013/01/20478280_abc.cab");
+        Assert.True(real.IsAllowed, real.Reason);
+
+        var search = allowlist.Check("https://www.catalog.update.microsoft.com/Search.aspx?q=hp");
+        Assert.True(search.IsAllowed, search.Reason);
+
+        var dialog = allowlist.Check("https://www.catalog.update.microsoft.com/DownloadDialog.aspx");
+        Assert.True(dialog.IsAllowed, dialog.Reason);
+
+        // 伪装域名仍然必须被拒绝
+        Assert.False(allowlist.Check("https://catalog.s.download.windowsupdate.com.evil.io/a.cab").IsAllowed);
+        Assert.False(allowlist.Check("https://evildownload.windowsupdate.com.attacker.net/a.cab").IsAllowed);
+        Assert.False(allowlist.Check("https://driverscollection.com/hp.exe").IsAllowed);
+    }
+
+    [Theory]
+    [InlineData("HP", "HP Deskjet 2520 series", "HP Deskjet 2520 series")]
+    [InlineData("HP", "Deskjet 2520 series", "HP Deskjet 2520 series")]
+    [InlineData("HP", "", "HP")]
+    [InlineData("", "Deskjet 2520", "Deskjet 2520")]
+    [InlineData("Canon", "MG6300", "Canon MG6300")]
+    public void 检索词构造(string brand, string model, string expected)
+    {
+        // 回归用例:早期实现会拼出「HP HP Deskjet 2520 series printer driver」,
+        // 这种短语在 Microsoft Update Catalog 上直接查不到任何结果。
+        Assert.Equal(expected, OnlineDriverService.BuildQuery(brand, model));
+    }
+
     [Theory]
     [InlineData("HP Universal Printing PCL 6", PrintDescriptionLanguage.PCL6)]
     [InlineData("HP Universal Printing PS", PrintDescriptionLanguage.PS)]

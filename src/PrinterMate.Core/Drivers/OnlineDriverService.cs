@@ -76,7 +76,7 @@ public sealed class OnlineDriverService
         CancellationToken ct = default)
     {
         var results = new List<OnlineDriverCandidate>();
-        var query = string.Join(' ', new[] { brand, model, "printer driver" }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        var query = BuildQuery(brand, model);
 
         try
         {
@@ -91,12 +91,12 @@ public sealed class OnlineDriverService
                 results.Add(new OnlineDriverCandidate(
                     entry.Title,
                     brand,
-                    entry.Version,
-                    entry.Size,
+                    string.IsNullOrWhiteSpace(entry.Version) ? "(未标注)" : entry.Version,
+                    string.IsNullOrWhiteSpace(entry.Size) ? "(未知)" : entry.Size,
                     entry.UpdateId,
                     "Microsoft Update Catalog",
                     IsDirectDownload: false,
-                    "来自 Microsoft Update Catalog,下载前会解析官方直链并校验签名。"));
+                    $"分类:{entry.Classification};适用系统:{entry.Products};更新时间:{entry.LastUpdated}。下载前会解析官方直链并校验签名。"));
             }
         }
         catch (OperationCanceledException)
@@ -244,6 +244,29 @@ public sealed class OnlineDriverService
         }
     }
 
+    /// <summary>
+    /// 构造检索词。MUC 是按短语匹配的:
+    ///   - 不要附加 "printer driver" 之类后缀,否则会直接查不到;
+    ///   - 型号里已经含品牌时不要再拼一次,避免出现「HP HP Deskjet …」。
+    /// </summary>
+    public static string BuildQuery(string brand, string? model)
+    {
+        var b = (brand ?? string.Empty).Trim();
+        var m = (model ?? string.Empty).Trim();
+
+        if (m.Length == 0)
+        {
+            return b;
+        }
+
+        if (b.Length == 0 || m.Contains(b, StringComparison.OrdinalIgnoreCase))
+        {
+            return m;
+        }
+
+        return $"{b} {m}";
+    }
+
     /// <summary>查找 7-Zip(可选依赖,只用于解包,不用于执行任何安装器)。</summary>
     private static string? FindSevenZip()
     {
@@ -277,9 +300,14 @@ public sealed class OnlineDriverService
 public sealed record UpdateCatalogEntry(
     string UpdateId,
     string Title,
+    string Products,
+    string Classification,
     string Version,
     string Size,
-    string LastUpdated);
+    string LastUpdated)
+{
+    public bool IsDriverEntry => Classification.Contains("Driver", StringComparison.OrdinalIgnoreCase);
+}
 
 /// <summary>
 /// Microsoft Update Catalog 客户端(https://catalog.update.microsoft.com)。
@@ -290,20 +318,40 @@ public sealed class MicrosoftUpdateCatalogClient
     private const string SearchEndpoint = "https://www.catalog.update.microsoft.com/Search.aspx?q=";
     private const string DownloadDialogEndpoint = "https://www.catalog.update.microsoft.com/DownloadDialog.aspx";
 
+    // 真实页面结构(2026-10 实测):
+    //   <tr id="{GUID}_R{m}" ...>                       ← R{m} 是**行号**(R0/R1/R2…),不是常量
+    //     <td id="{GUID}_C0_R{m}">…</td>                 勾选框列
+    //     <td id="{GUID}_C1_R{m}"><a id='{GUID}_link' …>标题</a></td>
+    //     <td id="{GUID}_C2_R{m}">Products</td>
+    //     <td id="{GUID}_C3_R{m}">Drivers (Other Hardware)</td>   分类
+    //     <td id="{GUID}_C4_R{m}">11/9/2009</td>                   更新时间
+    //     <td id="{GUID}_C5_R{m}">n/a</td>                         版本
+    //     <td id="{GUID}_C6_R{m}"><span id="{GUID}_size">6.7 MB</span></td>
+    //   </tr>
+    // 注意:早期实现把行号写死成 _R0,导致整页 14 条只解析出 1 条。
     private static readonly Regex RowRegex = new(
-        @"<a\s+id=""(?<id>[0-9a-fA-F\-]{36})""[^>]*>(?<title>.*?)</a>",
-        RegexOptions.Singleline | RegexOptions.Compiled);
+        @"(?is)<tr[^>]*id=""(?<guid>[0-9a-fA-F\-]{36})_R\d+""[^>]*>(?<body>.*?)</tr>",
+        RegexOptions.Compiled);
 
-    private static readonly Regex ColumnRegex = new(
-        @"<td[^>]*>(?<value>.*?)</td>",
-        RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex TitleRegex = new(
+        @"(?is)id='[0-9a-fA-F\-]{36}_link'[^>]*>(?<title>.*?)</a>",
+        RegexOptions.Compiled);
+
+    private static readonly Regex CellRegex = new(
+        @"(?is)id=""[0-9a-fA-F\-]{36}_C(?<n>\d+)_R\d+""[^>]*>(?<value>.*?)</td>",
+        RegexOptions.Compiled);
+
+    private static readonly Regex SizeRegex = new(
+        @"(?is)id=""[0-9a-fA-F\-]{36}_size""[^>]*>(?<size>.*?)</span>",
+        RegexOptions.Compiled);
 
     private static readonly Regex UrlRegex = new(
         @"(?<url>https?://[^'""\s\\]+\.(?:cab|msi|exe|zip))",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>仅在分类列缺失时兜底使用的标题关键词。</summary>
     private static readonly Regex DriverKeywordRegex = new(
-        @"(driver|打印|printer|print|pcl|postscript|ps\b|universal)",
+        @"(driver|打印|printer|print|pcl|postscript|\bps\b|universal)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly HttpClient _http;
@@ -315,7 +363,15 @@ public sealed class MicrosoftUpdateCatalogClient
         _audit = audit ?? new AuditLog();
     }
 
-    public bool LooksLikeDriver(UpdateCatalogEntry entry) => DriverKeywordRegex.IsMatch(entry.Title);
+    /// <summary>
+    /// 判断一条更新是不是驱动。
+    /// 优先看分类列(实测值形如「Drivers (Other Hardware)」「Drivers (Printers)」),
+    /// 只有分类为空时才退回标题关键词。
+    /// </summary>
+    public bool LooksLikeDriver(UpdateCatalogEntry entry)
+        => string.IsNullOrWhiteSpace(entry.Classification)
+            ? DriverKeywordRegex.IsMatch(entry.Title)
+            : entry.IsDriverEntry;
 
     public async Task<IReadOnlyList<UpdateCatalogEntry>> SearchAsync(string query, CancellationToken ct)
     {
@@ -325,26 +381,38 @@ public sealed class MicrosoftUpdateCatalogClient
         var entries = new List<UpdateCatalogEntry>();
         foreach (Match match in RowRegex.Matches(html))
         {
-            var id = match.Groups["id"].Value;
-            var title = StripHtml(match.Groups["title"].Value);
+            var body = match.Groups["body"].Value;
+
+            var title = StripHtml(TitleRegex.Match(body).Groups["title"].Value);
             if (title.Length == 0)
             {
                 continue;
             }
 
-            // 取该链接之后同一行内的各列(版本/大小/更新时间)
-            var tail = html[match.Index..Math.Min(html.Length, match.Index + 1400)];
-            var columns = ColumnRegex.Matches(tail).Select(m => StripHtml(m.Groups["value"].Value)).ToList();
+            var cells = new Dictionary<int, string>();
+            foreach (Match cell in CellRegex.Matches(body))
+            {
+                if (int.TryParse(cell.Groups["n"].Value, out var index))
+                {
+                    cells[index] = StripHtml(cell.Groups["value"].Value);
+                }
+            }
+
+            var size = StripHtml(SizeRegex.Match(body).Groups["size"].Value);
 
             entries.Add(new UpdateCatalogEntry(
-                id,
-                title,
-                columns.Count > 3 ? columns[3] : string.Empty,
-                columns.Count > 5 ? columns[5] : string.Empty,
-                columns.Count > 7 ? columns[7] : string.Empty));
+                UpdateId: match.Groups["guid"].Value,
+                Title: title,
+                Products: cells.GetValueOrDefault(2, string.Empty),
+                Classification: cells.GetValueOrDefault(3, string.Empty),
+                LastUpdated: cells.GetValueOrDefault(4, string.Empty),
+                Version: cells.GetValueOrDefault(5, string.Empty),
+                Size: size.Length > 0 ? size : cells.GetValueOrDefault(6, string.Empty)));
         }
 
-        _audit.Write("在线检索-MUC", query, entries.Count > 0 ? "成功" : "未命中", $"返回 {entries.Count} 条。URL={url}");
+        _audit.Write("在线检索-MUC", query, entries.Count > 0 ? "成功" : "未命中",
+            $"页面解析出 {entries.Count} 条;其中驱动 {entries.Count(e => LooksLikeDriver(e))} 条。URL={url}");
+
         return entries;
     }
 

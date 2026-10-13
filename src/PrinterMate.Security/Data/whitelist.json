@@ -6,7 +6,9 @@
     "dl.delivery.mp.microsoft.com",
     "care.dlservice.microsoft.com",
     "update.microsoft.com",
-    "windowsupdate.microsoft.com"
+    "windowsupdate.microsoft.com",
+    "catalog.s.download.windowsupdate.com",
+    "download.windowsupdate.com"
   ],
   "vendorDomains": [
     { "brand": "HP", "domain": "hp.com", "note": "惠普全球官方站点" },
