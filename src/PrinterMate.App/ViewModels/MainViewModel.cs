@@ -36,6 +36,7 @@ public sealed class MainViewModel : ObservableObject
     {
         Services = services;
 
+        Tutorial = new TutorialViewModel(services);
         DeviceDiscovery = new DeviceDiscoveryViewModel(services);
         DriverManagement = new DriverManagementViewModel(services);
         Printing = new PrintingViewModel(services);
@@ -44,6 +45,7 @@ public sealed class MainViewModel : ObservableObject
 
         Pages = new ObservableCollection<NavItem>
         {
+            new("新手必读", Tutorial),
             new("设备发现与连接", DeviceDiscovery),
             new("驱动管理", DriverManagement),
             new("打印与测试页", Printing),
@@ -67,6 +69,9 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public AppServices Services { get; }
+
+    /// <summary>新手教程页(导航第一项)。</summary>
+    public TutorialViewModel Tutorial { get; }
 
     public DeviceDiscoveryViewModel DeviceDiscovery { get; }
 
