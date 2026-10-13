@@ -142,10 +142,13 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
     private const string DisclosureText = "使用者声明:本机个人使用,不对外分发本软件与驱动包。";
 
     private readonly AppServices _services;
+    private readonly ThirdPartyDriverSiteLauncher _siteLauncher = new();
 
     private bool _isBusy;
     private bool _suppressPolicyCallback;
     private bool _allowAllBuiltin;
+    private string _siteModel = string.Empty;
+    private DriverSiteSearch? _selectedSite;
 
     private string _keyword = string.Empty;
     private string _brandFilter = AllBrands;
@@ -160,9 +163,39 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         SearchCandidatesCommand = new AsyncRelayCommand(() => SearchCandidatesAsync(), () => !IsBusy);
         UseCandidateCommand = new RelayCommand(UseCandidate, () => SelectedManualCandidate is { Installable: true });
         RefreshCommand = new RelayCommand(LoadLibrary);
+        OpenSiteSearchCommand = new RelayCommand(OpenSiteSearch);
+
+        foreach (var site in ThirdPartyDriverSiteLauncher.Sites)
+        {
+            DriverSites.Add(site);
+        }
+
+        _selectedSite = DriverSites.FirstOrDefault();
 
         LoadLibrary();
     }
+
+    /// <summary>已注册的第三方驱动站检索入口。</summary>
+    public ObservableCollection<DriverSiteSearch> DriverSites { get; } = new();
+
+    public RelayCommand OpenSiteSearchCommand { get; }
+
+    /// <summary>第三方站检索用的型号输入。</summary>
+    public string SiteModel
+    {
+        get => _siteModel;
+        set => SetProperty(ref _siteModel, value);
+    }
+
+    public DriverSiteSearch? SelectedSite
+    {
+        get => _selectedSite;
+        set => SetProperty(ref _selectedSite, value);
+    }
+
+    public string SiteHint =>
+        "程序只负责在浏览器中打开搜索页,不会下载、不会安装、也不会放宽任何签名校验。"
+        + "这些站点并非厂商官方来源,下载与安装的风险由你自己承担。";
 
     public ObservableCollection<DriverBrandGroup> BrandGroups { get; } = new();
 
@@ -549,6 +582,44 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private void OpenSiteSearch()
+    {
+        var site = SelectedSite;
+        if (site is null)
+        {
+            StatusHub.Warn("第三方驱动站", "请先选择要打开的站点。");
+            return;
+        }
+
+        var prepared = _siteLauncher.Prepare(site.Id, SiteModel);
+        if (!prepared.IsSuccess || prepared.Value is null)
+        {
+            StatusHub.Warn("第三方驱动站", prepared.Message, prepared.Suggestion ?? string.Empty);
+            return;
+        }
+
+        // 二次确认里承载完整的风险告知,不依赖用户去别处阅读。
+        if (!_services.Dialogs.Confirm(
+                "风险自担:打开第三方驱动站",
+                ThirdPartyDriverSiteLauncher.MandatoryWarning + "\n\n" + prepared.Value.Description,
+                "我已知晓,打开",
+                "取消"))
+        {
+            StatusHub.Info("第三方驱动站", "已取消打开。");
+            return;
+        }
+
+        var opened = _siteLauncher.Open(prepared.Value);
+        if (opened.IsSuccess)
+        {
+            StatusHub.Warn("第三方驱动站", opened.Message, opened.Suggestion ?? string.Empty);
+        }
+        else
+        {
+            StatusHub.Error("第三方驱动站", opened.Message, opened.Suggestion ?? string.Empty);
         }
     }
 

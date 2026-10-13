@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     把厂商通用驱动(UPD)导入 PrinterMate 内置驱动库,并回填 Catalog/drivers.json。
 
@@ -28,7 +28,7 @@ param(
     [string]$DriverName,
     [string[]]$Arch = @('x64'),
     [string]$Version = '',
-    [string]$Root = (Split-Path -Parent $PSScriptRoot),
+    [string]$Root = (Join-Path $env:LOCALAPPDATA 'PrinterMate'),
     [switch]$ConfirmRedistribution,
     [switch]$Force
 )
@@ -40,22 +40,125 @@ function Write-Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
 function Write-Ok($msg) { Write-Host "    $msg" -ForegroundColor Green }
 function Write-Warn2($msg) { Write-Host "    $msg" -ForegroundColor Yellow }
 
-# ── 0. 定位仓库根 ────────────────────────────────────────────────
-$manifestPath = Join-Path $Root 'Catalog\drivers.json'
-if (-not (Test-Path $manifestPath)) {
-    throw "找不到驱动清单:$manifestPath。请用 -Root 指定仓库根目录。"
+# ── 驱动包解包(只使用"不执行"的解包工具) ────────────────────────
+# 设计取舍:自解压 .exe 绝不用"盲猜开关去运行"的方式解包 ——
+# 那等于让厂商安装器直接改系统,绕过本脚本的签名与哈希校验。
+# 只用 7-Zip 与 expand.exe 这类纯解包工具;两者都失败就明确报错。
+function Expand-DriverPackage {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Source,
+        [Parameter(Mandatory)][string]$Destination
+    )
+
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    $ext = [IO.Path]::GetExtension($Source).ToLowerInvariant()
+
+    function Test-Extracted {
+        return @(Get-ChildItem -Path $Destination -Recurse -Filter *.inf -File -ErrorAction SilentlyContinue).Count -gt 0
+    }
+
+    if ($ext -in @('.zip', '.cab')) {
+        if ($ext -eq '.zip') {
+            Expand-Archive -LiteralPath $Source -DestinationPath $Destination -Force
+        }
+        else {
+            $expand = Join-Path $env:SystemRoot 'System32\expand.exe'
+            & $expand -F:* $Source $Destination | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "expand.exe 解压 CAB 失败(退出码 $LASTEXITCODE)。" }
+        }
+        if (Test-Extracted) { return $true }
+        throw "解包后未发现 .inf 文件,该文件可能不是驱动包。"
+    }
+
+    if ($ext -ne '.exe') {
+        throw "不支持的驱动包格式:$ext(支持文件夹 / .zip / .cab / .exe)。"
+    }
+
+    # 策略 1:7-Zip(能识别大量厂商自解压格式)
+    $sevenZip = @(
+        "$env:ProgramFiles\7-Zip\7z.exe",
+        "${env:ProgramFiles(x86)}\7-Zip\7z.exe"
+    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+    if ($sevenZip) {
+        Write-Step "用 7-Zip 解包:$Source"
+        & $sevenZip x -y "-o$Destination" $Source | Out-Null
+        if (Test-Extracted) {
+            Write-Ok "7-Zip 解包成功。"
+            return $true
+        }
+        Write-Warn2 "7-Zip 未能从该 exe 中取出 .inf。"
+    }
+    else {
+        Write-Warn2 "未安装 7-Zip,跳过该方式。"
+    }
+
+    # 策略 2:expand.exe(对 CAB 型自解压有效,不会执行任何安装逻辑)
+    Write-Step "用 expand.exe 尝试解包"
+    $expandExe = Join-Path $env:SystemRoot 'System32\expand.exe'
+    & $expandExe -F:* $Source $Destination 2>$null | Out-Null
+    if (Test-Extracted) {
+        Write-Ok "expand.exe 解包成功。"
+        return $true
+    }
+
+    throw @"
+无法在不执行安装器的前提下解开该 exe,已停止。
+
+这不是脚本的 bug,而是有意的取舍:盲猜开关去运行厂商安装器,
+等于让它直接改系统并绕过本脚本的 SHA256 与 .cat 签名校验。
+
+请改用以下任一方式(都不需要运行安装器):
+  1. 安装 7-Zip 后重跑本脚本(推荐);
+  2. 用 7-Zip 或 Windows 11 资源管理器的「全部解压缩」手工解开,
+     再用 -Source 指定解压出来的文件夹;
+  3. 直接从厂商官网下载"包含 INF/CAT 的驱动包"而非自解压安装器。
+"@
 }
+
+# ── 0. 定位驱动库根目录与清单 ────────────────────────────────────
+# 目标根目录必须与程序 DriverLibrary.ResolveDefaultRoot() 的查找顺序一致:
+#   1) 环境变量 PRINTERMATE_ROOT
+#   2) %LOCALAPPDATA%\PrinterMate        ← 本脚本默认写这里
+#   3) 程序所在目录
+#   4) 从程序目录逐级上溯找到 Catalog\drivers.json
+$manifestRel = 'Catalog\drivers.json'
+$manifestPath = Join-Path $Root $manifestRel
+
+if (-not (Test-Path $manifestPath)) {
+    Write-Step "目标驱动库尚无清单,正在从随包清单播种"
+    $repoRoot = Split-Path -Parent $PSScriptRoot
+    $seedCandidates = @(
+        @(
+            (Join-Path $repoRoot $manifestRel),
+            (Join-Path $repoRoot 'src\PrinterMate.Catalog\Data\drivers.json')
+        ) | Where-Object { Test-Path $_ }
+    )
+
+    if ($seedCandidates.Count -eq 0) {
+        throw "找不到驱动清单,也没有可用的随包清单副本。请用 -Root 指定驱动库根目录。"
+    }
+
+    New-Item -ItemType Directory -Path (Split-Path -Parent $manifestPath) -Force | Out-Null
+    Copy-Item -LiteralPath $seedCandidates[0] -Destination $manifestPath -Force
+    Write-Ok "已从随包清单播种:$($seedCandidates[0])"
+}
+
+Write-Ok "驱动库根目录:$Root"
+Write-Ok "清单文件:$manifestPath"
 
 # ── 1. 准备源目录 ────────────────────────────────────────────────
 $work = $null
+$extractedTemp = $null
 if (Test-Path $Source -PathType Container) {
     $work = (Resolve-Path $Source).Path
 }
 elseif (Test-Path $Source -PathType Leaf) {
     $work = Join-Path ([IO.Path]::GetTempPath()) ("pm-import-" + [Guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path $work -Force | Out-Null
-    Write-Step "解压 $Source"
-    Expand-Archive -Path $Source -DestinationPath $work -Force
+    $extractedTemp = $work
+    Write-Step "解包 $Source"
+    Expand-DriverPackage -Source (Resolve-Path $Source).Path -Destination $work | Out-Null
 }
 else {
     throw "源路径不存在:$Source"
@@ -89,7 +192,7 @@ if (-not $DriverName) {
             $models += $Matches[1].Trim()
         }
     }
-    $models = $models | Where-Object { $_ -and $_ -notmatch '^\s*;' } | Select-Object -Unique
+    $models = @($models | Where-Object { $_ -and $_ -notmatch '^\s*;' } | Select-Object -Unique)
     if ($models.Count -eq 0) { throw "无法从 $($inf.Name) 解析出驱动名,请用 -DriverName 显式指定。" }
 
     Write-Ok "候选驱动名:"
@@ -199,6 +302,6 @@ if (-not $ConfirmRedistribution) {
     Write-Warn2 "redistributable=false:程序不会从本地安装该驱动,将自动降级到官方在线源(L2)。"
     Write-Warn2 "完成再分发授权核对后,请重新执行并加上 -ConfirmRedistribution。"
 }
-if ($work -ne (Resolve-Path $Source -ErrorAction SilentlyContinue).Path -and (Test-Path $work)) {
-    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+if ($extractedTemp -and (Test-Path $extractedTemp)) {
+    Remove-Item -LiteralPath $extractedTemp -Recurse -Force -ErrorAction SilentlyContinue
 }

@@ -48,8 +48,6 @@ Drivers/
 ## 导入驱动包
 
 ```powershell
-# 1. 从厂商官方网站下载通用驱动(例如 HP Universal Print Driver for Windows PCL6)
-# 2. 导入到驱动库
 .\tools\Import-DriverPackage.ps1 `
     -Brand HP `
     -Family "Universal Print Driver" `
@@ -58,14 +56,36 @@ Drivers/
     -ConfirmRedistribution
 ```
 
+`-Source` 可以是**文件夹**、`.zip`、`.cab` 或厂商的**自解压 `.exe`**。
+
+**驱动库位置**:默认写入 `%LOCALAPPDATA%\PrinterMate`(与程序的查找顺序一致),
+首次运行会从随包清单自动播种 `Catalog\drivers.json`。用 `-Root` 可以指定别处。
+
+- 程序查找顺序:`PRINTERMATE_ROOT` → `%LOCALAPPDATA%\PrinterMate` → 程序目录 → 逐级上溯。
+- 放在 `%LOCALAPPDATA%` 的好处:驱动库可以独立更新,不需要重装主程序。
+
 导入脚本会:
 
-1. 定位 `.inf` 与 `.cat`;
+1. 定位 `.inf` 与 `.cat`(`.exe` 先解包,见下);
 2. 用 `Get-AuthenticodeSignature` 校验 **`.cat`** 的 Authenticode 签名(签名在目录文件上,不在 INF 上);
 3. 解析 INF 的 `[Models]` 段列出可用驱动名;
 4. 计算 INF 的 SHA256 并回填 `Catalog/drivers.json`;
 5. 复制文件到 `Drivers/<Brand>/<slug>/`;
 6. **只有在显式传入 `-ConfirmRedistribution` 时才把 `redistributable` 置为 `true`**。
+
+### 关于自解压 `.exe`(HP / Canon 官网常见形态)
+
+脚本只用**不执行**的解包工具:先试 7-Zip,再试 `expand.exe`。
+
+**它不会"盲猜开关去运行厂商安装器"** —— 那等于让安装器直接改系统,并绕过脚本自己的
+SHA256 与 `.cat` 签名校验。两种工具都失败时脚本会明确报错并给出替代方案,而不是继续硬试。
+
+如果你没装 7-Zip:装上后重跑,或用 Windows 11 资源管理器的「全部解压缩」手工解开,
+再把解压出来的文件夹用 `-Source` 传进来。
+
+> 注意:部分第三方"驱动站"的包会把驱动负载封装成**改名后的加密压缩文件**
+> (例如把 7z 改成 `.dat`),并附带自家安装器。这种包在安装前无法检查内容、
+> 也没有外露的 `.cat`。导入脚本遇到这类包会直接报「未发现 .inf 文件」并拒绝。
 
 ## 授权红线
 

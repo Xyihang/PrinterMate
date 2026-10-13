@@ -97,6 +97,26 @@
                 </TreeView.ItemTemplate>
             </TreeView>
 
+            <TextBlock Style="{StaticResource SectionHeader}" Text="第三方驱动站检索(风险自担)"/>
+            <Border Style="{StaticResource Card}" BorderBrush="#FFB45309" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="{Binding SiteHint}" TextWrapping="Wrap" Foreground="#FFB45309"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="站点:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Width="260" ItemsSource="{Binding DriverSites}"
+                                  SelectedItem="{Binding SelectedSite}"
+                                  DisplayMemberPath="DisplayName" Margin="0,0,12,0"/>
+                        <TextBlock Text="打印机型号:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox Width="220" Padding="4,3" Margin="0,0,12,0"
+                                 Text="{Binding SiteModel, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="在浏览器中打开搜索页" Padding="12,4"
+                                Command="{Binding OpenSiteSearchCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Margin="0,6,0,0" Foreground="#FF666666" TextWrapping="Wrap"
+                               Text="提示:驱动天空(drvsky)只接受 POST 检索,程序会在本机生成一个表单页并交由浏览器提交;程序自身不会向该站发起请求。"/>
+                </StackPanel>
+            </Border>
+
             <TextBlock Style="{StaticResource SectionHeader}" Text="人工选择驱动(自动匹配失败时使用)"/>
             <WrapPanel Margin="0,0,0,6">
                 <TextBlock Text="品牌:" VerticalAlignment="Center" Margin="0,0,6,0"/>

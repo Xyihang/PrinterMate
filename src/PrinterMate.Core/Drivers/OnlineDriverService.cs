@@ -179,7 +179,7 @@ public sealed class OnlineDriverService
         }
     }
 
-    /// <summary>解压驱动包(CAB / ZIP / 裸 INF),返回其中的 INF 文件路径。</summary>
+    /// <summary>解压驱动包(CAB / ZIP / 自解压 EXE / 裸 INF),返回其中的 INF 文件路径。</summary>
     public OperationResult<string> Extract(string packagePath, string? extractDirectory = null)
     {
         try
@@ -194,31 +194,39 @@ public sealed class OnlineDriverService
             var target = extractDirectory ?? Path.Combine(Path.GetDirectoryName(packagePath)!, Path.GetFileNameWithoutExtension(packagePath) + "_extracted");
             Directory.CreateDirectory(target);
 
-            if (extension is ".cab")
-            {
-                var expand = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "expand.exe");
-                var result = ProcessRunner.Run(expand, new[] { "-F:*", packagePath, target }, TimeSpan.FromMinutes(2));
-                if (!result.Success)
-                {
-                    return OperationResult<string>.Fail(
-                        $"解压 CAB 失败:{result.ShortError}",
-                        "请确认驱动包完整;若是分卷包,需要先合并。");
-                }
-            }
-            else if (extension is ".zip")
+            if (extension is ".zip")
             {
                 System.IO.Compression.ZipFile.ExtractToDirectory(packagePath, target, overwriteFiles: true);
             }
-            else if (extension is ".exe" or ".msi")
+            else if (extension is ".cab" or ".exe" or ".msi")
             {
-                return OperationResult<string>.Fail(
-                    "该驱动包是自解压安装程序,无法自动提取 INF。",
-                    "请手动运行安装程序,或下载包含 INF/CAT 的驱动包后在「驱动管理」中导入。",
-                    OperationStatus.NotSupported);
+                // 只使用"不执行"的解包工具,绝不盲猜开关去运行厂商安装器 ——
+                // 那等于让安装器直接改系统并绕过签名与哈希校验。
+                var sevenZip = FindSevenZip();
+                if (sevenZip is not null)
+                {
+                    ProcessRunner.Run(sevenZip, new[] { "x", "-y", $"-o{target}", packagePath }, TimeSpan.FromMinutes(3));
+                }
+
+                if (!HasInf(target))
+                {
+                    var expand = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "expand.exe");
+                    ProcessRunner.Run(expand, new[] { "-F:*", packagePath, target }, TimeSpan.FromMinutes(2));
+                }
+
+                if (!HasInf(target))
+                {
+                    var what = extension == ".cab" ? "CAB" : "自解压安装程序";
+                    return OperationResult<string>.Fail(
+                        $"无法在不运行安装器的前提下从该{what}中提取 INF 文件。",
+                        "请安装 7-Zip 后重试,或手工解压后把文件夹内容导入「驱动管理」;"
+                        + "也可以直接从厂商官网下载包含 INF/CAT 的驱动包。",
+                        OperationStatus.NotSupported);
+                }
             }
             else
             {
-                return OperationResult<string>.Fail($"不支持的驱动包格式:{extension}", "支持 .cab / .zip / .inf。");
+                return OperationResult<string>.Fail($"不支持的驱动包格式:{extension}", "支持 .cab / .zip / .exe / .msi / .inf。");
             }
 
             var inf = Directory.EnumerateFiles(target, "*.inf", SearchOption.AllDirectories)
@@ -235,6 +243,22 @@ public sealed class OnlineDriverService
             return ex.ToFailure<string>("解压驱动包");
         }
     }
+
+    /// <summary>查找 7-Zip(可选依赖,只用于解包,不用于执行任何安装器)。</summary>
+    private static string? FindSevenZip()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "7-Zip", "7z.exe"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "7-Zip", "7z.exe"),
+        };
+
+        return candidates.FirstOrDefault(File.Exists);
+    }
+
+    private static bool HasInf(string directory)
+        => Directory.Exists(directory)
+           && Directory.EnumerateFiles(directory, "*.inf", SearchOption.AllDirectories).Any();
 
     private static string BuildFileName(OnlineDriverCandidate candidate, string url)
     {
