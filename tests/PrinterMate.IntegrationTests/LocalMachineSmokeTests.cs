@@ -269,6 +269,42 @@ public class LocalMachineSmokeTests
     }
 
     [Fact]
+    public async Task 在线补齐_应能从微软官方源下载并通过官方SHA256校验()
+    {
+        var service = new OnlineDriverService();
+        var search = await service.SearchAsync("HP", "HP Deskjet 2520 series");
+
+        if (!search.IsSuccess || search.Value is null || search.Value.Count == 0)
+        {
+            _output.WriteLine($"检索不可用,跳过下载验证:{search.Message}");
+            return;
+        }
+
+        var candidate = search.Value.First();
+        _output.WriteLine($"候选:{candidate.DisplayName} / {candidate.Size}");
+
+        var result = await service.DownloadAsync(candidate, OnlineDriverInstaller.DownloadDirectory);
+
+        _output.WriteLine($"下载结果:{result.Message}");
+        _output.WriteLine($"建议:{result.Suggestion}");
+
+        if (result.IsSuccess && result.Value is not null)
+        {
+            var file = new FileInfo(result.Value);
+            _output.WriteLine($"落地文件:{result.Value}");
+            _output.WriteLine($"大小:{file.Length} 字节");
+            Assert.True(file.Exists);
+            Assert.True(file.Length > 0);
+        }
+        else
+        {
+            _output.WriteLine($"!! 下载未通过,原因:{result.Message}");
+        }
+
+        Assert.True(result.IsSuccess, $"下载未通过:{result.Message} | {result.Suggestion}");
+    }
+
+    [Fact]
     public void 白名单与审计日志_在本机可正常初始化()
     {
         var allowlist = DownloadSourceAllowlist.Default;

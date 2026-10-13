@@ -140,10 +140,12 @@ public sealed class OnlineDriverService
             Directory.CreateDirectory(destinationDirectory);
 
             var url = candidate.Url;
+            string? officialSha256 = null;
+
             if (!candidate.IsDirectDownload)
             {
-                var resolved = await _catalog.ResolveDownloadUrlAsync(candidate, ct).ConfigureAwait(false);
-                if (string.IsNullOrWhiteSpace(resolved))
+                var target = await _catalog.ResolveDownloadTargetAsync(candidate, ct).ConfigureAwait(false);
+                if (target is null)
                 {
                     return OperationResult<string>.Fail(
                         "无法从 Microsoft Update Catalog 解析出官方直链。",
@@ -151,17 +153,67 @@ public sealed class OnlineDriverService
                         OperationStatus.NeedsUserAction);
                 }
 
-                url = resolved;
+                url = target.Url;
+
+                if (target.HasOfficialSha256)
+                {
+                    officialSha256 = target.Sha256Hex;
+                    _audit.Write(
+                        "在线下载-采用官方公布哈希",
+                        candidate.DisplayName,
+                        "通过",
+                        $"SHA256 来自 Microsoft Update Catalog 公布值:{officialSha256}");
+                }
+                else
+                {
+                    _audit.Write(
+                        "在线下载-缺少官方哈希",
+                        candidate.DisplayName,
+                        "警告",
+                        "Microsoft Update Catalog 未公布该文件的 SHA256,将依赖信任账本与数字签名校验。");
+                }
+            }
+
+            // 来源性质决定"信任锚点"是什么,两者不能混用:
+            //   · 厂商官方域名:三方一致 —— 域名品牌 = 签名品牌 = 期望品牌;
+            //   · 微软官方更新服务:双锚点 —— 微软域名 + 微软公布的 SHA256 + 受信任签名链。
+            //     Windows Update 上的驱动由微软加 MOPR 签名再分发,签名主体是 Microsoft 而非 HP,
+            //     因此这一层【不能】要求签名主体等于期望品牌;厂商身份由解包后的驱动包 .cat 把关。
+            var sourceCheck = DownloadSourceAllowlist.Default.Check(url);
+
+            if (!sourceCheck.IsVendorDomain && officialSha256 is null)
+            {
+                _audit.Write("在线下载-拒绝", candidate.DisplayName, "拒绝",
+                    $"微软官方源未公布该文件的 SHA256,无法建立完整性锚点。来源={sourceCheck.MatchedDomain}");
+
+                return OperationResult<string>.Fail(
+                    "微软官方源未公布该文件的 SHA256,无法建立完整性锚点,已拒绝下载。",
+                    "请改用厂商官网的完整驱动包,或稍后重试(官方哈希通常随页面一同返回)。",
+                    OperationStatus.NotPermitted);
+            }
+
+            var signerBrand = sourceCheck.IsVendorDomain ? candidate.Brand : null;
+
+            if (!sourceCheck.IsVendorDomain)
+            {
+                _audit.Write("在线下载-信任锚点", candidate.DisplayName, "调整",
+                    $"来源为微软官方更新服务({sourceCheck.MatchedDomain}),签名主体为微软再分发签名;"
+                    + $"本层以「微软公布的 SHA256={officialSha256}」+ 受信任签名链为锚点,"
+                    + "品牌一致性改由解包后驱动包的 .cat 签名校验");
             }
 
             var fileName = BuildFileName(candidate, url);
             var destination = Path.Combine(destinationDirectory, fileName);
 
             var result = await _downloader
-                .DownloadAsync(url, destination, expectedSha256: null, expectedSignerSubject, candidate.Brand, progress, ct)
+                .DownloadAsync(url, destination, officialSha256, expectedSignerSubject, signerBrand, progress, ct)
                 .ConfigureAwait(false);
 
-            return OperationResult<string>.Ok(destination, $"驱动包已下载并通过校验({result.Size} 字节)。");
+            var hashNote = officialSha256 is null
+                ? "(清单未公布哈希,已由信任账本固定)"
+                : "(已与微软官方公布的 SHA256 比对通过)";
+
+            return OperationResult<string>.Ok(destination, $"驱动包已下载并通过校验({result.Size} 字节){hashNote}");
         }
         catch (SecurityPolicyException ex)
         {
@@ -310,6 +362,15 @@ public sealed class OnlineDriverService
     }
 }
 
+/// <summary>Microsoft Update Catalog 解析出的下载目标(含官方公布的哈希)。</summary>
+public sealed record CatalogDownloadTarget(
+    string Url,
+    string Sha256Hex,
+    string Sha1Base64)
+{
+    public bool HasOfficialSha256 => !string.IsNullOrWhiteSpace(Sha256Hex);
+}
+
 /// <summary>Microsoft Update Catalog 更新条目。</summary>
 public sealed record UpdateCatalogEntry(
     string UpdateId,
@@ -362,6 +423,22 @@ public sealed class MicrosoftUpdateCatalogClient
     private static readonly Regex UrlRegex = new(
         @"(?<url>https?://[^'""\s\\]+\.(?:cab|msi|exe|zip))",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    // DownloadDialog 返回的脚本形如:
+    //   downloadInformation[0].files[0].url = 'https://…/20478280_….cab';
+    //   downloadInformation[0].files[0].digest = '<base64 SHA1>';
+    //   downloadInformation[0].files[0].sha256 = '<base64 SHA256>';
+    private static readonly Regex FileUrlRegex = new(
+        @"(?i)files\[(?<i>\d+)\]\.url\s*=\s*'(?<url>[^']+)'",
+        RegexOptions.Compiled);
+
+    private static readonly Regex FileSha256Regex = new(
+        @"(?i)files\[(?<i>\d+)\]\.sha256\s*=\s*'(?<sha>[^']*)'",
+        RegexOptions.Compiled);
+
+    private static readonly Regex FileSha1Regex = new(
+        @"(?i)files\[(?<i>\d+)\]\.digest\s*=\s*'(?<sha>[^']*)'",
+        RegexOptions.Compiled);
 
     /// <summary>仅在分类列缺失时兜底使用的标题关键词。</summary>
     private static readonly Regex DriverKeywordRegex = new(
@@ -430,15 +507,19 @@ public sealed class MicrosoftUpdateCatalogClient
         return entries;
     }
 
-    /// <summary>解析直链。MUC 的下载直链在 DownloadDialog.aspx 返回的脚本里。</summary>
-    public async Task<string?> ResolveDownloadUrlAsync(OnlineDriverCandidate candidate, CancellationToken ct)
+    /// <summary>
+    /// 解析官方直链与官方公布的哈希。
+    /// MUC 的 DownloadDialog 会把 files[n].url / digest(SHA1) / sha256 写进返回的脚本里,
+    /// 其中 sha256 是 **Base64** 编码的 32 字节摘要,这里转成十六进制以便与本地计算结果比对。
+    /// </summary>
+    public async Task<CatalogDownloadTarget?> ResolveDownloadTargetAsync(OnlineDriverCandidate candidate, CancellationToken ct)
     {
         // candidate.Url 存放的是 updateId
         var payload = new Dictionary<string, string>
         {
             ["updateIDs"] = JsonSerializer.Serialize(new[]
             {
-                new { size = 0, languages = "", uidInfo = candidate.Url, updateID = candidate.Url },
+                new { size = 0, updateID = candidate.Url, uidInfo = candidate.Url },
             }),
             ["updateIDsBlockedForImport"] = string.Empty,
             ["wsusApiPresent"] = string.Empty,
@@ -452,23 +533,82 @@ public sealed class MicrosoftUpdateCatalogClient
         using var response = await _http.PostAsync(DownloadDialogEndpoint, content, ct).ConfigureAwait(false);
         var html = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
-        var match = UrlRegex.Match(html);
-        if (!match.Success)
+        var urls = Collect(FileUrlRegex, html, "url");
+        if (urls.Count == 0)
         {
-            _audit.Write("在线检索-MUC直链", candidate.DisplayName, "失败", "DownloadDialog 未返回可识别的下载地址。");
+            // 退一步:整页里找一个文件直链
+            var fallback = UrlRegex.Match(html);
+            if (!fallback.Success)
+            {
+                _audit.Write("在线检索-MUC直链", candidate.DisplayName, "失败", "DownloadDialog 未返回可识别的下载地址。");
+                return null;
+            }
+
+            return new CatalogDownloadTarget(NormalizeScheme(fallback.Groups["url"].Value), string.Empty, string.Empty);
+        }
+
+        var firstIndex = urls.Keys.OrderBy(i => i).First();
+        var sha256 = Collect(FileSha256Regex, html, "sha");
+        var sha1 = Collect(FileSha1Regex, html, "sha");
+
+        var target = new CatalogDownloadTarget(
+            NormalizeScheme(urls[firstIndex]),
+            sha256.TryGetValue(firstIndex, out var b64Sha256) ? TryBase64ToHex(b64Sha256) ?? string.Empty : string.Empty,
+            sha1.GetValueOrDefault(firstIndex, string.Empty));
+
+        _audit.Write(
+            "在线检索-MUC直链",
+            candidate.DisplayName,
+            "成功",
+            $"直链={target.Url};官方SHA256={(target.HasOfficialSha256 ? target.Sha256Hex : "(未公布)")}");
+
+        return target;
+    }
+
+    /// <summary>把形如 <c>files[n].字段 = '值'</c> 的赋值按序号收集起来。</summary>
+    private static Dictionary<int, string> Collect(Regex regex, string html, string valueGroup)
+    {
+        var result = new Dictionary<int, string>();
+        foreach (Match match in regex.Matches(html))
+        {
+            if (int.TryParse(match.Groups["i"].Value, out var index))
+            {
+                result[index] = match.Groups[valueGroup].Value.Trim();
+            }
+        }
+
+        return result;
+    }
+
+    private static string NormalizeScheme(string url)
+    {
+        var cleaned = url.Replace("&amp;", "&");
+
+        // MUC 的直链有时是 http,统一升级为 https;
+        // 若服务器不支持 https,SecureDownloader 会因非 HTTPS 而拒绝,这是预期行为。
+        return cleaned.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            ? "https://" + cleaned["http://".Length..]
+            : cleaned;
+    }
+
+    /// <summary>Base64 摘要 → 十六进制。长度不是 32 字节(SHA256)时返回 null。</summary>
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+    public static string? TryBase64ToHex(string? base64)
+    {
+        if (string.IsNullOrWhiteSpace(base64))
+        {
             return null;
         }
 
-        var url = match.Groups["url"].Value.Replace("&amp;", "&");
-
-        // Microsoft Update Catalog 的直链有时是 http,统一升级为 https;
-        // 若服务器不支持 https,SecureDownloader 会因非 HTTPS 而拒绝,这是预期行为。
-        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            url = "https://" + url["http://".Length..];
+            var bytes = Convert.FromBase64String(base64.Trim());
+            return bytes.Length == 32 ? Convert.ToHexString(bytes) : null;
         }
-
-        return url;
+        catch (FormatException)
+        {
+            return null;
+        }
     }
 
     private static string StripHtml(string html)

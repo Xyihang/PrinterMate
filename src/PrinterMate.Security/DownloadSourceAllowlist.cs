@@ -168,16 +168,11 @@ public sealed class DownloadSourceAllowlist
         // 微软来源优先(更具体),但不计入厂商域名。
         if (TryMatch(host, _microsoftDomains, out var microsoftMatch))
         {
-            if (expectedBrand is not null && !expectedBrand.Trim().Equals(MicrosoftBrand, StringComparison.OrdinalIgnoreCase))
-            {
-                return new SourceCheckResult(
-                    SourceVerdict.VendorMismatch,
-                    false,
-                    $"下载来源属于微软更新服务,与期望品牌「{expectedBrand}」不一致,已拒绝。",
-                    microsoftMatch,
-                    false);
-            }
-
+            // 这里【不做】品牌一致性检查,原因:
+            // Windows Update Catalog 正是微软替各厂商分发官方驱动的渠道,
+            // 「期望品牌 HP,却从 catalog.s.download.windowsupdate.com 下载」是完全正常且唯一正确的来源。
+            // 驱动包的真实归属由 Authenticode 签名主体把关(SignaturePolicy / DriverPackageVerifier),
+            // 而不是由域名把关 —— 域名只能证明"谁在托管",签名才能证明"谁生产的"。
             return new SourceCheckResult(
                 SourceVerdict.Allowed,
                 true,

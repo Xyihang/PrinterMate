@@ -126,6 +126,37 @@ public class InfDriverNameParsingTests
         Assert.False(allowlist.Check("https://driverscollection.com/hp.exe").IsAllowed);
     }
 
+    [Fact]
+    public void 官方公布哈希应为标准SHA256向量()
+    {
+        // SHA256("") 的标准 Base64 与十六进制表示
+        const string base64 = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
+        Assert.Equal(
+            "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+            MicrosoftUpdateCatalogClient.TryBase64ToHex(base64));
+    }
+
+    [Fact]
+    public void 线上公布的Base64摘要应转为六十四位十六进制()
+    {
+        // 2026-10 从 Microsoft Update Catalog DownloadDialog 实测抓到的值
+        var hex = MicrosoftUpdateCatalogClient.TryBase64ToHex("tAH7ljtTr09KKUaPKY+sZi0kat6PolKhqdiiBmPmzjQ=");
+
+        Assert.NotNull(hex);
+        Assert.Equal(64, hex!.Length);
+        Assert.Matches("^[0-9A-F]{64}$", hex);
+    }
+
+    [Fact]
+    public void 非法的或长度不符的摘要应返回null()
+    {
+        Assert.Null(MicrosoftUpdateCatalogClient.TryBase64ToHex(null));
+        Assert.Null(MicrosoftUpdateCatalogClient.TryBase64ToHex(string.Empty));
+        Assert.Null(MicrosoftUpdateCatalogClient.TryBase64ToHex("not-base64!!"));
+        // SHA1 是 20 字节,不是 SHA256
+        Assert.Null(MicrosoftUpdateCatalogClient.TryBase64ToHex(Convert.ToBase64String(new byte[20])));
+    }
+
     [Theory]
     [InlineData("HP", "HP Deskjet 2520 series", "https://www.catalog.update.microsoft.com/Search.aspx?q=HP%20Deskjet%202520%20series")]
     [InlineData("HP", "Deskjet 2520 series", "https://www.catalog.update.microsoft.com/Search.aspx?q=HP%20Deskjet%202520%20series")]

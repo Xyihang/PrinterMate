@@ -91,12 +91,27 @@ public class DownloadSourceAllowlistTests
     }
 
     [Fact]
-    public void Check_ReturnsVendorMismatchForMicrosoftHostWithVendorBrand()
+    public void Check_AllowsMicrosoftHostEvenWhenExpectedBrandIsAVendor()
     {
+        // 回归用例:早期实现会在这里返回 VendorMismatch,导致
+        // 「期望 HP,却从微软 CDN 下载 HP 官方驱动包」这条唯一正确的路径被自家策略拒死。
+        // Windows Update Catalog 就是微软替厂商分发官方驱动的渠道,品牌一致性由签名主体把关。
         var result = DownloadSourceAllowlist.Default.Check("https://download.microsoft.com/x.exe", "HP");
 
-        Assert.False(result.IsAllowed);
-        Assert.Equal(SourceVerdict.VendorMismatch, result.Verdict);
+        Assert.True(result.IsAllowed, result.Reason);
+        Assert.Equal(SourceVerdict.Allowed, result.Verdict);
+        Assert.False(result.IsVendorDomain);
+    }
+
+    [Fact]
+    public void Check_AllowsMicrosoftCatalogCdnForVendorPrinterDriver()
+    {
+        // 线上实测的完整场景:HP 打印机 → Microsoft Update Catalog → catalog.s.download.windowsupdate.com
+        var result = DownloadSourceAllowlist.Default.Check(
+            "https://catalog.s.download.windowsupdate.com/msdownload/update/driver/drvs/2013/01/20478280_abc.cab",
+            "HP");
+
+        Assert.True(result.IsAllowed, result.Reason);
     }
 
     [Fact]
