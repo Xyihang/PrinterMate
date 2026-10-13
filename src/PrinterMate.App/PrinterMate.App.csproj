@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>PrinterMate.App</RootNamespace>
+    <AssemblyName>PrinterMate</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>AnyCPU;x64;ARM64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PrinterMate.Core\PrinterMate.Core.csproj" />
+    <ProjectReference Include="..\PrinterMate.Elevated\PrinterMate.Elevated.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- 提权辅助进程必须与主程序同目录拷贝,主程序本身以 asInvoker 运行 -->
+  <Target Name="CopyElevatedHelper" AfterTargets="Build">
+    <ItemGroup>
+      <ElevatedFiles Include="$(MSBuildThisFileDirectory)..\PrinterMate.Elevated\bin\$(Configuration)\net8.0-windows\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ElevatedFiles)" DestinationFiles="@(ElevatedFiles->'$(OutDir)elevated\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

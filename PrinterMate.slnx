@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PrinterMate.App/PrinterMate.App.csproj" />
+    <Project Path="src/PrinterMate.Catalog/PrinterMate.Catalog.csproj" />
+    <Project Path="src/PrinterMate.Core/PrinterMate.Core.csproj" />
+    <Project Path="src/PrinterMate.Elevated/PrinterMate.Elevated.csproj" />
+    <Project Path="src/PrinterMate.Interop/PrinterMate.Interop.csproj" />
+    <Project Path="src/PrinterMate.Printing/PrinterMate.Printing.csproj" />
+    <Project Path="src/PrinterMate.Security/PrinterMate.Security.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PrinterMate.IntegrationTests/PrinterMate.IntegrationTests.csproj" />
+    <Project Path="tests/PrinterMate.UnitTests/PrinterMate.UnitTests.csproj" />
+  </Folder>
+</Solution>

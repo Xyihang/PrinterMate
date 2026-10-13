@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>PrinterMate.Core</RootNamespace>
+    <AssemblyName>PrinterMate.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PrinterMate.Interop\PrinterMate.Interop.csproj" />
+    <ProjectReference Include="..\PrinterMate.Security\PrinterMate.Security.csproj" />
+    <ProjectReference Include="..\PrinterMate.Catalog\PrinterMate.Catalog.csproj" />
+    <ProjectReference Include="..\PrinterMate.Printing\PrinterMate.Printing.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>PrinterMate.Printing</RootNamespace>
+    <AssemblyName>PrinterMate.Printing</AssemblyName>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PrinterMate.Interop\PrinterMate.Interop.csproj" />
+    <PackageReference Include="SharpIppNext" Version="5.0.0" />
+  </ItemGroup>
+
+</Project>

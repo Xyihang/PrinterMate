@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>PrinterMate.Elevated</RootNamespace>
+    <AssemblyName>PrinterMate.Elevated</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PrinterMate.Interop\PrinterMate.Interop.csproj" />
+    <ProjectReference Include="..\PrinterMate.Security\PrinterMate.Security.csproj" />
+    <ProjectReference Include="..\PrinterMate.Catalog\PrinterMate.Catalog.csproj" />
+  </ItemGroup>
+
+</Project>
