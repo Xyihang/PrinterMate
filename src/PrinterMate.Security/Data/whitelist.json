@@ -1,0 +1,81 @@
+{
+  "microsoftDomains": [
+    "catalog.update.microsoft.com",
+    "www.catalog.update.microsoft.com",
+    "download.microsoft.com",
+    "dl.delivery.mp.microsoft.com",
+    "care.dlservice.microsoft.com",
+    "update.microsoft.com",
+    "windowsupdate.microsoft.com"
+  ],
+  "vendorDomains": [
+    { "brand": "HP", "domain": "hp.com", "note": "惠普全球官方站点" },
+    { "brand": "HP", "domain": "ftp.hp.com", "note": "惠普驱动下载" },
+    { "brand": "HP", "domain": "h10025.www1.hp.com", "note": "惠普支持中心" },
+    { "brand": "HP", "domain": "www8.hp.com", "note": "惠普支持中心" },
+
+    { "brand": "Canon", "domain": "canon.com", "note": "佳能全球官方站点" },
+    { "brand": "Canon", "domain": "www.canon.com", "note": "佳能全球官方站点" },
+    { "brand": "Canon", "domain": "gdlp01.c-wss.com", "note": "佳能全球驱动下载" },
+    { "brand": "Canon", "domain": "sg.canon", "note": "佳能新加坡官方站点" },
+
+    { "brand": "Epson", "domain": "epson.com", "note": "爱普生美国官方站点" },
+    { "brand": "Epson", "domain": "epson-europe.com", "note": "爱普生欧洲官方站点" },
+    { "brand": "Epson", "domain": "epson.net", "note": "爱普生全球官方站点" },
+    { "brand": "Epson", "domain": "download.epson-europe.com", "note": "爱普生欧洲驱动下载" },
+    { "brand": "Epson", "domain": "download2.epson.net", "note": "爱普生驱动下载" },
+    { "brand": "Epson", "domain": "www.epson.com", "note": "爱普生美国官方站点" },
+
+    { "brand": "Brother", "domain": "brother.com", "note": "兄弟全球官方站点" },
+    { "brand": "Brother", "domain": "download.brother.com", "note": "兄弟驱动下载" },
+    { "brand": "Brother", "domain": "www.brother.com", "note": "兄弟全球官方站点" },
+
+    { "brand": "Kyocera", "domain": "kyoceradocumentsolutions.com", "note": "京瓷办公官方站点" },
+    { "brand": "Kyocera", "domain": "www.kyoceradocumentsolutions.com", "note": "京瓷办公官方站点" },
+    { "brand": "Kyocera", "domain": "cdn.kyoceradocumentsolutions.com", "note": "京瓷驱动 CDN" },
+
+    { "brand": "Ricoh", "domain": "ricoh.com", "note": "理光全球官方站点" },
+    { "brand": "Ricoh", "domain": "support.ricoh.com", "note": "理光支持中心" },
+    { "brand": "Ricoh", "domain": "www.ricoh.com", "note": "理光全球官方站点" },
+
+    { "brand": "Lexmark", "domain": "lexmark.com", "note": "利盟全球官方站点" },
+    { "brand": "Lexmark", "domain": "downloads.lexmark.com", "note": "利盟驱动下载" },
+    { "brand": "Lexmark", "domain": "www.lexmark.com", "note": "利盟全球官方站点" },
+
+    { "brand": "Fujifilm", "domain": "fujifilm.com", "note": "富士胶片官方站点" },
+    { "brand": "Fujifilm", "domain": "download.fujifilm.com", "note": "富士胶片驱动下载" },
+    { "brand": "Fujifilm", "domain": "support-fb.fujifilm.com", "note": "富士胶片支持中心" },
+
+    { "brand": "Konica Minolta", "domain": "konicaminolta.com", "note": "柯尼卡美能达全球官方站点" },
+    { "brand": "Konica Minolta", "domain": "konicaminolta.eu", "note": "柯尼卡美能达欧洲官方站点" },
+    { "brand": "Konica Minolta", "domain": "www.konicaminolta.com", "note": "柯尼卡美能达全球官方站点" },
+    { "brand": "Konica Minolta", "domain": "dl.konicaminolta.eu", "note": "柯尼卡美能达欧洲驱动下载" },
+
+    { "brand": "Sharp", "domain": "sharpusa.com", "note": "夏普美国官方站点" },
+    { "brand": "Sharp", "domain": "sharp.co.jp", "note": "夏普日本官方站点" },
+    { "brand": "Sharp", "domain": "files.sharpusa.com", "note": "夏普美国驱动下载" },
+    { "brand": "Sharp", "domain": "www.sharp.co.jp", "note": "夏普日本官方站点" },
+
+    { "brand": "Toshiba", "domain": "toshibatec.com", "note": "东芝泰格官方站点" },
+    { "brand": "Toshiba", "domain": "business.toshiba.com", "note": "东芝商用官方站点" },
+    { "brand": "Toshiba", "domain": "toshiba.com", "note": "东芝全球官方站点" },
+    { "brand": "Toshiba", "domain": "www.toshibatec.com", "note": "东芝泰格官方站点" },
+
+    { "brand": "OKI", "domain": "oki.com", "note": "冲电气官方站点" },
+    { "brand": "OKI", "domain": "download.oki.com", "note": "冲电气驱动下载" },
+    { "brand": "OKI", "domain": "www.oki.com", "note": "冲电气官方站点" },
+
+    { "brand": "Pantum", "domain": "pantum.com", "note": "奔图官方站点" },
+    { "brand": "Pantum", "domain": "www.pantum.com", "note": "奔图官方站点" },
+
+    { "brand": "Lenovo", "domain": "lenovo.com", "note": "联想全球官方站点" },
+    { "brand": "Lenovo", "domain": "download.lenovo.com", "note": "联想驱动下载" },
+    { "brand": "Lenovo", "domain": "www.lenovo.com", "note": "联想全球官方站点" },
+
+    { "brand": "Deli", "domain": "nbdeli.com", "note": "得力集团官方站点(如有变更需人工确认)" },
+    { "brand": "Deli", "domain": "deli.com.cn", "note": "得力官方站点(如有变更需人工确认)" },
+
+    { "brand": "Jolimark", "domain": "jolimark.com", "note": "映美官方站点" },
+    { "brand": "Jolimark", "domain": "www.jolimark.com", "note": "映美官方站点" }
+  ]
+}

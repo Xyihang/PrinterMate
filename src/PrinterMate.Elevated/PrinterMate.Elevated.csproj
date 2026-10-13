@@ -9,9 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PrinterMate.Interop\PrinterMate.Interop.csproj" />
-    <ProjectReference Include="..\PrinterMate.Security\PrinterMate.Security.csproj" />
-    <ProjectReference Include="..\PrinterMate.Catalog\PrinterMate.Catalog.csproj" />
+    <ProjectReference Include="..\PrinterMate.Core\PrinterMate.Core.csproj" />
   </ItemGroup>
 
 </Project>
