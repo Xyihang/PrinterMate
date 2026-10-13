@@ -1,8 +1,65 @@
 <UserControl x:Class="PrinterMate.App.Views.DriverManagementView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <UserControl.Resources>
+        <!--
+            性能约定:本页只有最外层 ScrollViewer 一个滚动宿主。
+            内层列表一律关闭自身滚动条与其虚拟化面板 —— 它们被嵌在无限高度的父容器里,
+            虚拟化本来就不会生效,只会白白多出滚动宿主与命中测试层次,造成滚动卡顿。
+        -->
+        <Style x:Key="EmbeddedGrid" TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="CanUserResizeRows" Value="False"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="RowDetailsVisibilityMode" Value="Collapsed"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="False"/>
+        </Style>
+
+        <Style x:Key="EmbeddedList" TargetType="ListBox">
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="False"/>
+        </Style>
+
+        <Style x:Key="EmbeddedTree" TargetType="TreeView">
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="False"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  CanContentScroll="False"
+                  PanningMode="VerticalOnly">
         <StackPanel>
+
+            <TextBlock Style="{StaticResource SectionHeader}" Text="第三方驱动站检索(风险自担)"/>
+            <Border Style="{StaticResource Card}" BorderBrush="#FFB45309" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="{Binding SiteHint}" TextWrapping="Wrap" Foreground="#FFB45309"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="站点:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Width="260" ItemsSource="{Binding DriverSites}"
+                                  SelectedItem="{Binding SelectedSite}"
+                                  DisplayMemberPath="DisplayName" Margin="0,0,12,0"/>
+                        <TextBlock Text="打印机型号:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox Width="220" Padding="4,3" Margin="0,0,12,0"
+                                 Text="{Binding SiteModel, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="在浏览器中打开搜索页" Padding="12,4"
+                                Command="{Binding OpenSiteSearchCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Margin="0,6,0,0" Foreground="#FF666666" TextWrapping="Wrap"
+                               Text="提示:驱动天空(drvsky)只接受 POST 检索,程序会在本机生成一个表单页并交由浏览器提交;程序自身不会向该站发起请求。"/>
+                </StackPanel>
+            </Border>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="内置驱动库状态(离线可用的关键)"/>
             <TextBlock Style="{StaticResource Hint}" Text="{Binding LibraryHeadline}" FontWeight="Bold"/>
@@ -35,6 +92,68 @@
                 </StackPanel>
             </Border>
 
+            <TextBlock Style="{StaticResource SectionHeader}" Text="在线补齐(L2 · 仅白名单官方源)"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding OnlineHint}" TextWrapping="Wrap" Foreground="#FF666666"/>
+
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="品牌:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Width="150" ItemsSource="{Binding Brands}" SelectedItem="{Binding OnlineBrand}" Margin="0,0,10,0"/>
+                        <TextBlock Text="型号关键词:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox Width="200" Padding="4,3" Margin="0,0,10,0"
+                                 Text="{Binding OnlineKeyword, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="检索官方源" Padding="12,4" Command="{Binding SearchOnlineCommand}"/>
+                        <Button Content="打开 Microsoft Update Catalog" Padding="12,4" Margin="8,0,0,0"
+                                Command="{Binding OpenCatalogCommand}"/>
+                    </WrapPanel>
+
+                    <TextBlock Margin="0,8,0,0" Text="{Binding OnlineSummary}" TextWrapping="Wrap" FontWeight="Bold"/>
+
+                    <ListBox Style="{StaticResource EmbeddedList}"
+                             ItemsSource="{Binding OnlineCandidates}"
+                             SelectedItem="{Binding SelectedOnlineCandidate}"
+                             Margin="0,4,0,0"
+                             Visibility="{Binding HasOnlineCandidates, Converter={StaticResource BoolToVisibility}}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding DisplayName}" Width="430"
+                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding DisplayName}"/>
+                                    <TextBlock Text="{Binding SourceName}" Width="210"/>
+                                    <TextBlock Text="{Binding Version}" Width="90"/>
+                                    <TextBlock Text="{Binding Size}" Width="80"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="① 下载并校验" Padding="12,4" Margin="0,0,8,0"
+                                Command="{Binding DownloadOnlineCommand}"/>
+                        <Button Content="② 解包并验证驱动包" Padding="12,4" Margin="0,0,8,0"
+                                Command="{Binding ExtractOnlineCommand}"/>
+                        <Button Content="③ 加入本机驱动库" Padding="12,4"
+                                Command="{Binding ImportOnlineCommand}"/>
+                    </WrapPanel>
+
+                    <ProgressBar Height="6" Margin="0,10,0,0" IsIndeterminate="True"
+                                 Visibility="{Binding OnlineBusy, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <StackPanel Margin="0,8,0,0"
+                                Visibility="{Binding HasOnlineDriverNames, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="从 INF 解析出的驱动名(入库时必须与 INF 逐字一致):"/>
+                        <ComboBox Width="460" HorizontalAlignment="Left" Margin="0,4,0,0"
+                                  ItemsSource="{Binding OnlineDriverNames}"
+                                  SelectedItem="{Binding SelectedOnlineDriverName}"/>
+                    </StackPanel>
+
+                    <TextBlock Margin="0,8,0,0" Text="{Binding OnlineStageText}" TextWrapping="Wrap"/>
+                    <TextBlock Margin="0,4,0,0" Text="{Binding OnlineResultText}" TextWrapping="Wrap"
+                               Foreground="#FF1B7F3B"/>
+                </StackPanel>
+            </Border>
+
             <TextBlock Style="{StaticResource SectionHeader}" Text="内置驱动许可(本机授权开关)"/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
@@ -46,28 +165,22 @@
                               IsChecked="{Binding AllowAllBuiltinDrivers}"/>
 
                     <TextBlock Margin="0,8,0,2" Text="按品牌单独设置(优先级高于上面的全局开关):"/>
-                    <DataGrid ItemsSource="{Binding BrandPolicies}"
-                              AutoGenerateColumns="False"
-                              CanUserAddRows="False"
-                              HeadersVisibility="Column"
-                              MaxHeight="240"
+                    <DataGrid Style="{StaticResource EmbeddedGrid}"
+                              IsReadOnly="False"
+                              ItemsSource="{Binding BrandPolicies}"
                               Visibility="{Binding HasBrandPolicies, Converter={StaticResource BoolToVisibility}}">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="品牌" Binding="{Binding Brand}" Width="160" IsReadOnly="True"/>
                             <DataGridTextColumn Header="清单情况" Binding="{Binding SummaryText}" Width="*" IsReadOnly="True"/>
-                            <DataGridCheckBoxColumn Header="允许内置驱动" Binding="{Binding IsBuiltinAllowed, UpdateSourceTrigger=PropertyChanged}" Width="130"/>
+                            <DataGridCheckBoxColumn Header="允许内置驱动" Width="130"
+                                                    Binding="{Binding IsBuiltinAllowed, UpdateSourceTrigger=PropertyChanged}"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </StackPanel>
             </Border>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="各品牌可用性统计"/>
-            <DataGrid ItemsSource="{Binding BrandSummaries}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      CanUserAddRows="False"
-                      HeadersVisibility="Column"
-                      MaxHeight="200">
+            <DataGrid Style="{StaticResource EmbeddedGrid}" ItemsSource="{Binding BrandSummaries}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="品牌" Binding="{Binding Brand}" Width="180"/>
                     <DataGridTextColumn Header="条目统计" Binding="{Binding SummaryText}" Width="*"/>
@@ -75,7 +188,7 @@
             </DataGrid>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="全部内置驱动条目(按品牌分组,可展开)"/>
-            <TreeView ItemsSource="{Binding BrandGroups}" MaxHeight="340">
+            <TreeView Style="{StaticResource EmbeddedTree}" ItemsSource="{Binding BrandGroups}">
                 <TreeView.ItemTemplate>
                     <HierarchicalDataTemplate ItemsSource="{Binding Entries}">
                         <TextBlock Text="{Binding Header}" FontWeight="Bold" Margin="0,2"/>
@@ -97,26 +210,6 @@
                 </TreeView.ItemTemplate>
             </TreeView>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="第三方驱动站检索(风险自担)"/>
-            <Border Style="{StaticResource Card}" BorderBrush="#FFB45309" BorderThickness="1">
-                <StackPanel>
-                    <TextBlock Text="{Binding SiteHint}" TextWrapping="Wrap" Foreground="#FFB45309"/>
-                    <WrapPanel Margin="0,8,0,0">
-                        <TextBlock Text="站点:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <ComboBox Width="260" ItemsSource="{Binding DriverSites}"
-                                  SelectedItem="{Binding SelectedSite}"
-                                  DisplayMemberPath="DisplayName" Margin="0,0,12,0"/>
-                        <TextBlock Text="打印机型号:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBox Width="220" Padding="4,3" Margin="0,0,12,0"
-                                 Text="{Binding SiteModel, UpdateSourceTrigger=PropertyChanged}"/>
-                        <Button Content="在浏览器中打开搜索页" Padding="12,4"
-                                Command="{Binding OpenSiteSearchCommand}"/>
-                    </WrapPanel>
-                    <TextBlock Margin="0,6,0,0" Foreground="#FF666666" TextWrapping="Wrap"
-                               Text="提示:驱动天空(drvsky)只接受 POST 检索,程序会在本机生成一个表单页并交由浏览器提交;程序自身不会向该站发起请求。"/>
-                </StackPanel>
-            </Border>
-
             <TextBlock Style="{StaticResource SectionHeader}" Text="人工选择驱动(自动匹配失败时使用)"/>
             <WrapPanel Margin="0,0,0,6">
                 <TextBlock Text="品牌:" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -130,9 +223,10 @@
 
             <TextBlock Style="{StaticResource Hint}" Text="{Binding ManualSummary}"/>
 
-            <ListBox ItemsSource="{Binding ManualCandidates}"
+            <ListBox Style="{StaticResource EmbeddedList}"
+                     ItemsSource="{Binding ManualCandidates}"
                      SelectedItem="{Binding SelectedManualCandidate}"
-                     Height="190"
+                     MinHeight="60"
                      Margin="0,0,0,6">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
@@ -155,18 +249,6 @@
                 <Button Content="设为连接时使用的驱动" Command="{Binding UseCandidateCommand}"/>
             </WrapPanel>
             <TextBlock Style="{StaticResource Hint}" Text="{Binding ManualSelectionText}"/>
-
-            <TextBlock Style="{StaticResource SectionHeader}" Text="在线补齐(L2)"/>
-            <Border Style="{StaticResource Card}" Background="#FFFFF7E6" BorderBrush="#FFB56A00">
-                <StackPanel>
-                    <TextBlock Text="状态:待实现 / 后续版本" FontWeight="Bold" Foreground="#FFB56A00"/>
-                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
-                               Text="本版本不具备联网下载驱动的能力。当内置驱动库中没有可用条目时,程序不会访问任何网络地址,也不会静默降级。
-后续版本将按白名单(Microsoft 官方源 + 厂商官方域名,可在「设置」页查看)下载驱动包,并在安装前校验 HTTPS 证书、SHA256 与数字签名。"/>
-                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
-                               Text="当前建议:请使用厂商官方安装包安装驱动,或在「设置」页确认驱动库根目录是否已放入对应品牌的驱动包与清单。"/>
-                </StackPanel>
-            </Border>
 
         </StackPanel>
     </ScrollViewer>

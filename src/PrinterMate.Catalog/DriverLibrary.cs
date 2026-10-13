@@ -58,16 +58,26 @@ public sealed class DriverLibrary
     /// <summary>驱动库根目录(其下应有 Drivers\ 与 Catalog\ 子目录)。</summary>
     public string Root { get; }
 
-    public string ManifestPath { get; }
+    public string ManifestPath { get; private set; }
 
-    public DriverManifest Manifest { get; }
+    public DriverManifest Manifest { get; private set; }
 
-    public bool UsingEmbeddedManifest { get; }
+    public bool UsingEmbeddedManifest { get; private set; }
 
     /// <summary>本机驱动分发策略(清单红线之上的本机声明)。</summary>
     public DistributionPolicy Policy { get; }
 
-    public IReadOnlyList<DriverCatalogEntry> Entries { get; }
+    public IReadOnlyList<DriverCatalogEntry> Entries { get; private set; }
+
+    /// <summary>重新从磁盘加载清单(写入驱动库或更换策略后刷新视图用)。</summary>
+    public void Reload()
+    {
+        var reloaded = Load(Root, Policy);
+        ManifestPath = reloaded.ManifestPath;
+        Manifest = reloaded.Manifest;
+        UsingEmbeddedManifest = reloaded.UsingEmbeddedManifest;
+        Entries = reloaded.Entries;
+    }
 
     public static DriverLibrary Load(string? rootOverride = null, DistributionPolicy? policy = null)
     {

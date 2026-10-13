@@ -4,6 +4,7 @@ using PrinterMate.App.Services;
 using PrinterMate.Catalog;
 using PrinterMate.Core;
 using PrinterMate.Core.Drivers;
+using PrinterMate.Security;
 
 namespace PrinterMate.App.ViewModels;
 
@@ -143,12 +144,24 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
 
     private readonly AppServices _services;
     private readonly ThirdPartyDriverSiteLauncher _siteLauncher = new();
+    private readonly OnlineDriverInstaller _online = new();
 
     private bool _isBusy;
     private bool _suppressPolicyCallback;
     private bool _allowAllBuiltin;
     private string _siteModel = string.Empty;
     private DriverSiteSearch? _selectedSite;
+
+    private bool _onlineBusy;
+    private string _onlineBrand = "HP";
+    private string _onlineKeyword = string.Empty;
+    private string _onlineSummary = "尚未检索。选择品牌并填写型号关键词后点击「检索官方源」。";
+    private string _onlineStageText = string.Empty;
+    private string _onlineResultText = string.Empty;
+    private OnlineDriverCandidate? _selectedOnlineCandidate;
+    private string? _downloadedPackagePath;
+    private OnlinePackageResult? _package;
+    private string? _selectedOnlineDriverName;
 
     private string _keyword = string.Empty;
     private string _brandFilter = AllBrands;
@@ -164,6 +177,12 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         UseCandidateCommand = new RelayCommand(UseCandidate, () => SelectedManualCandidate is { Installable: true });
         RefreshCommand = new RelayCommand(LoadLibrary);
         OpenSiteSearchCommand = new RelayCommand(OpenSiteSearch);
+
+        SearchOnlineCommand = new AsyncRelayCommand(() => SearchOnlineAsync(), () => !OnlineBusy);
+        OpenCatalogCommand = new RelayCommand(OpenCatalog);
+        DownloadOnlineCommand = new AsyncRelayCommand(() => DownloadOnlineAsync(), () => !OnlineBusy && SelectedOnlineCandidate is not null);
+        ExtractOnlineCommand = new AsyncRelayCommand(() => ExtractOnlineAsync(), () => !OnlineBusy && _downloadedPackagePath is not null);
+        ImportOnlineCommand = new AsyncRelayCommand(() => ImportOnlineAsync(), () => !OnlineBusy && _package is not null);
 
         foreach (var site in ThirdPartyDriverSiteLauncher.Sites)
         {
@@ -196,6 +215,334 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
     public string SiteHint =>
         "程序只负责在浏览器中打开搜索页,不会下载、不会安装、也不会放宽任何签名校验。"
         + "这些站点并非厂商官方来源,下载与安装的风险由你自己承担。";
+
+    // ── 在线补齐(L2) ────────────────────────────────────────────
+
+    public ObservableCollection<OnlineDriverCandidate> OnlineCandidates { get; } = new();
+
+    public ObservableCollection<string> OnlineDriverNames { get; } = new();
+
+    public AsyncRelayCommand SearchOnlineCommand { get; }
+
+    public RelayCommand OpenCatalogCommand { get; }
+
+    public AsyncRelayCommand DownloadOnlineCommand { get; }
+
+    public AsyncRelayCommand ExtractOnlineCommand { get; }
+
+    public AsyncRelayCommand ImportOnlineCommand { get; }
+
+    public string OnlineHint =>
+        "只从白名单官方源获取:Microsoft Update Catalog。下载后强制校验 HTTPS 证书、SHA256 与 Authenticode 数字签名,"
+        + "任一不通过都会拒绝并写入审计日志。检索不到时不会静默降级,会给出官方下载页指引。";
+
+    public bool OnlineBusy
+    {
+        get => _onlineBusy;
+        private set
+        {
+            if (SetProperty(ref _onlineBusy, value))
+            {
+                SearchOnlineCommand.RaiseCanExecuteChanged();
+                DownloadOnlineCommand.RaiseCanExecuteChanged();
+                ExtractOnlineCommand.RaiseCanExecuteChanged();
+                ImportOnlineCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string OnlineBrand
+    {
+        get => _onlineBrand;
+        set => SetProperty(ref _onlineBrand, value);
+    }
+
+    public string OnlineKeyword
+    {
+        get => _onlineKeyword;
+        set => SetProperty(ref _onlineKeyword, value);
+    }
+
+    public string OnlineSummary
+    {
+        get => _onlineSummary;
+        private set => SetProperty(ref _onlineSummary, value);
+    }
+
+    public string OnlineStageText
+    {
+        get => _onlineStageText;
+        private set => SetProperty(ref _onlineStageText, value);
+    }
+
+    public string OnlineResultText
+    {
+        get => _onlineResultText;
+        private set => SetProperty(ref _onlineResultText, value);
+    }
+
+    public bool HasOnlineCandidates => OnlineCandidates.Count > 0;
+
+    public bool HasOnlineDriverNames => OnlineDriverNames.Count > 0;
+
+    public OnlineDriverCandidate? SelectedOnlineCandidate
+    {
+        get => _selectedOnlineCandidate;
+        set
+        {
+            if (SetProperty(ref _selectedOnlineCandidate, value))
+            {
+                DownloadOnlineCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string? SelectedOnlineDriverName
+    {
+        get => _selectedOnlineDriverName;
+        set => SetProperty(ref _selectedOnlineDriverName, value);
+    }
+
+    private async Task SearchOnlineAsync()
+    {
+        if (string.IsNullOrWhiteSpace(OnlineBrand))
+        {
+            StatusHub.Warn("在线补齐", "请先选择品牌。");
+            return;
+        }
+
+        OnlineBusy = true;
+        OnlineResultText = string.Empty;
+        OnlineStageText = "正在向 Microsoft Update Catalog 检索 …";
+        try
+        {
+            var model = string.IsNullOrWhiteSpace(OnlineKeyword) ? null : OnlineKeyword.Trim();
+            var result = await Task.Run(() => _online.SearchAsync(OnlineBrand, model));
+
+            OnlineCandidates.Clear();
+            foreach (var candidate in result.Value ?? Array.Empty<OnlineDriverCandidate>())
+            {
+                OnlineCandidates.Add(candidate);
+            }
+
+            OnlineSummary = result.IsSuccess
+                ? $"共检索到 {OnlineCandidates.Count} 个候选驱动包,选中后点击「① 下载并校验」。"
+                : result.Message;
+
+            OnPropertyChanged(nameof(HasOnlineCandidates));
+
+            if (result.IsSuccess)
+            {
+                StatusHub.Success("在线补齐", OnlineSummary, "下载前会校验 HTTPS、SHA256 与数字签名。");
+            }
+            else
+            {
+                StatusHub.Warn("在线补齐", result.Message, result.Suggestion ?? string.Empty);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("online-search", ex.ToString());
+            StatusHub.Error("在线补齐", "检索失败:" + ex.Message);
+        }
+        finally
+        {
+            OnlineBusy = false;
+            OnlineStageText = string.Empty;
+        }
+    }
+
+    private void OpenCatalog()
+    {
+        var keyword = string.Join(' ', new[] { OnlineBrand, OnlineKeyword }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        var url = "https://www.catalog.update.microsoft.com/Search.aspx?q="
+                  + Uri.EscapeDataString(string.IsNullOrWhiteSpace(keyword) ? "printer driver" : keyword);
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+            StatusHub.Info("在线补齐", "已在浏览器中打开 Microsoft Update Catalog。", url);
+        }
+        catch (Exception ex)
+        {
+            StatusHub.Error("在线补齐", "打开浏览器失败:" + ex.Message, url);
+        }
+    }
+
+    private async Task DownloadOnlineAsync()
+    {
+        var candidate = SelectedOnlineCandidate;
+        if (candidate is null)
+        {
+            StatusHub.Warn("在线补齐", "请先选择一条候选驱动包。");
+            return;
+        }
+
+        OnlineBusy = true;
+        OnlineResultText = string.Empty;
+        OnlineDriverNames.Clear();
+        _package = null;
+        _downloadedPackagePath = null;
+
+        var progress = new Progress<DownloadCheckpoint>(checkpoint =>
+        {
+            OnlineStageText = checkpoint.Stage switch
+            {
+                DownloadStage.CheckingSource => "正在校验下载源白名单 …",
+                DownloadStage.Downloading => $"正在下载 … 已接收 {checkpoint.BytesReceived / 1024} KB",
+                DownloadStage.Hashing => "正在计算 SHA256 …",
+                DownloadStage.VerifyingSignature => "正在校验 Authenticode 数字签名 …",
+                _ => "完成",
+            };
+        });
+
+        try
+        {
+            var result = await _online.DownloadAsync(candidate, progress);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                OnlineResultText = result.Message;
+                StatusHub.Warn("在线补齐", result.Message, result.Suggestion ?? string.Empty);
+                return;
+            }
+
+            _downloadedPackagePath = result.Value.FilePath;
+            OnlineResultText =
+                $"✅ 已下载并通过校验\n文件:{result.Value.FilePath}\n"
+                + $"大小:{result.Value.Size / 1024} KB\nSHA256:{result.Value.Sha256}\n"
+                + $"签名主体:{(string.IsNullOrWhiteSpace(result.Value.SignerSubject) ? "(未提取到)" : result.Value.SignerSubject)}\n"
+                + $"耗时:{result.Value.Elapsed.TotalSeconds:F1} 秒";
+
+            StatusHub.Success("在线补齐", "驱动包已下载并通过白名单、SHA256 与签名校验。", "接着点击「② 解包并验证驱动包」。");
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("online-download", ex.ToString());
+            OnlineResultText = ex.Message;
+            StatusHub.Error("在线补齐", "下载失败:" + ex.Message);
+        }
+        finally
+        {
+            OnlineBusy = false;
+            OnlineStageText = string.Empty;
+            ExtractOnlineCommand.RaiseCanExecuteChanged();
+            ImportOnlineCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    private Task ExtractOnlineAsync()
+    {
+        if (_downloadedPackagePath is null)
+        {
+            StatusHub.Warn("在线补齐", "请先完成「① 下载并校验」。");
+            return Task.CompletedTask;
+        }
+
+        OnlineBusy = true;
+        OnlineResultText = string.Empty;
+        try
+        {
+            OnlineStageText = "正在解包并校验驱动包 …";
+            var result = _online.ExtractAndVerify(_downloadedPackagePath);
+
+            if (!result.IsSuccess || result.Value is null)
+            {
+                OnlineResultText = result.Message;
+                StatusHub.Warn("在线补齐", result.Message, result.Suggestion ?? string.Empty);
+                return Task.CompletedTask;
+            }
+
+            _package = result.Value;
+
+            OnlineDriverNames.Clear();
+            foreach (var name in OnlineDriverInstaller.ReadDriverNamesFromInf(result.Value.InfPath))
+            {
+                OnlineDriverNames.Add(name);
+            }
+
+            SelectedOnlineDriverName = OnlineDriverNames.FirstOrDefault();
+            OnPropertyChanged(nameof(HasOnlineDriverNames));
+
+            OnlineResultText =
+                $"✅ 驱动包验证通过\nINF:{result.Value.InfPath}\n"
+                + $"INF SHA256:{result.Value.InfSha256}\n"
+                + $"签名文件:{result.Value.CatalogPath}\n"
+                + $"签名主体:{result.Value.SignerSubject}\n"
+                + $"解析出 {OnlineDriverNames.Count} 个驱动名。";
+
+            StatusHub.Success("在线补齐", "驱动包已解包并通过 .cat 签名校验。", "确认驱动名后点击「③ 加入本机驱动库」。");
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("online-extract", ex.ToString());
+            OnlineResultText = ex.Message;
+            StatusHub.Error("在线补齐", "解包失败:" + ex.Message);
+        }
+        finally
+        {
+            OnlineBusy = false;
+            OnlineStageText = string.Empty;
+            ImportOnlineCommand.RaiseCanExecuteChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task ImportOnlineAsync()
+    {
+        if (_package is null)
+        {
+            StatusHub.Warn("在线补齐", "请先完成「② 解包并验证驱动包」。");
+            return Task.CompletedTask;
+        }
+
+        var driverName = SelectedOnlineDriverName;
+        if (string.IsNullOrWhiteSpace(driverName))
+        {
+            StatusHub.Warn("在线补齐", "请先选择或填写驱动名(必须与 INF 的 [Models] 段逐字一致)。");
+            return Task.CompletedTask;
+        }
+
+        OnlineBusy = true;
+        try
+        {
+            OnlineStageText = "正在写入本机驱动库 …";
+            var result = _online.ImportToLibrary(
+                _package,
+                OnlineBrand,
+                $"{OnlineBrand} 在线补齐",
+                InferPdl(driverName),
+                driverName!);
+
+            OnlineResultText = result.Message;
+            if (result.IsSuccess)
+            {
+                StatusHub.Success("在线补齐", result.Message, "驱动库状态已刷新,现在可在「设备发现与连接」页连接该设备。");
+                LoadLibrary();
+            }
+            else
+            {
+                StatusHub.Warn("在线补齐", result.Message, result.Suggestion ?? string.Empty);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("online-import", ex.ToString());
+            OnlineResultText = ex.Message;
+            StatusHub.Error("在线补齐", "写入驱动库失败:" + ex.Message);
+        }
+        finally
+        {
+            OnlineBusy = false;
+            OnlineStageText = string.Empty;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>从驱动名推断页面描述语言(实现集中在 Core,便于单测)。</summary>
+    internal static PrintDescriptionLanguage InferPdl(string driverName)
+        => OnlineDriverInstaller.InferPdl(driverName);
 
     public ObservableCollection<DriverBrandGroup> BrandGroups { get; } = new();
 

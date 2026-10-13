@@ -176,20 +176,22 @@ $inf = $infFiles |
     Select-Object -First 1
 
 if (-not $DriverName) {
-    Write-Step "未指定 -DriverName,从 INF 的 [Models] 段解析"
+    Write-Step "未指定 -DriverName,正在解析 INF 中的驱动名"
+    # 注意:厂商 INF 的驱动名不一定在 [Models] 段 —— HP 用的是 [HP] / [HP.NTamd64]。
+    # 因此这里扫描除 [Version]/[Strings]/[Manufacturer] 之外的所有段。
     $models = @()
-    $inSection = $false
-    foreach ($line in Get-Content -LiteralPath $inf.FullName) {
-        if ($line -match '^\s*\[(.*)\]') {
-            $section = $Matches[1]
-            $inSection = $section -match 'Models'
+    $skipSection = $false
+    foreach ($line in (Get-Content -LiteralPath $inf.FullName)) {
+        if ($line -match '^\s*\[(.+?)\]\s*$') {
+            $section = $Matches[1].Trim()
+            $skipSection = $section -match '^(Version|Strings|Manufacturer)$'
             continue
         }
-        if ($inSection -and $line -match '^\s*"([^"]+)"\s*=') {
-            $models += $Matches[1]
-        }
-        elseif ($inSection -and $line -match '^\s*([^";\[]+?)\s*=\s*\S') {
-            $models += $Matches[1].Trim()
+        if ($skipSection -or $line -match '^\s*;') { continue }
+        # 设备条目形如:「"驱动名" = 安装节, 硬件ID」;借此排除 CopyFiles=@x.dll 这类指令。
+        if ($line -match '^\s*(%[^%]+%|"[^"]+"|[^";\[]+?)\s*=\s*[^,\r\n]+,\s*\S') {
+            $left = $Matches[1].Trim().Trim('"')
+            if ($left -and $left -notmatch '^%') { $models += $left }
         }
     }
     $models = @($models | Where-Object { $_ -and $_ -notmatch '^\s*;' } | Select-Object -Unique)

@@ -86,7 +86,7 @@ public sealed class DriverManifest
     public string SchemaVersion { get; init; } = "1.0";
 
     [JsonPropertyName("libraryVersion")]
-    public string LibraryVersion { get; init; } = string.Empty;
+    public string LibraryVersion { get; set; } = string.Empty;
 
     [JsonPropertyName("notes")]
     public string Notes { get; init; } = string.Empty;
