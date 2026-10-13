@@ -157,6 +157,60 @@ public class InfDriverNameParsingTests
         Assert.Null(MicrosoftUpdateCatalogClient.TryBase64ToHex(Convert.ToBase64String(new byte[20])));
     }
 
+    [Fact]
+    public void 应从同一个cab的多个INF中按变体挑对那一个()
+    {
+        // 回归用例:HP Deskjet 2520 的官方 cab 里同时有 5 个 INF(实测文件名)。
+        // 早期实现按文件名字母序取第一个 → 永远选中 HPRestStub.INF,
+        // 于是用户下载的是 (USB) 包,装进去的却是 REST 驱动桩。
+        const string usbTitle = "Hewlett-Packard  - Imaging - HP Deskjet 2520 series (USB)";
+        const string restTitle = "Hewlett-Packard  - Imaging - HP Deskjet 2520 series(REST)";
+
+        var directory = Path.Combine(Path.GetTempPath(), "pm-cab-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            var names = new[]
+            {
+                "HPRestStub.INF",
+                "hpvpl09.inf",
+                "HPWia_DJ2520.INF",
+                "nullprint.inf",
+                "NullScan_DJ2520.INF",
+            };
+
+            foreach (var name in names)
+            {
+                File.WriteAllText(
+                    Path.Combine(directory, name),
+                    "[Version]\r\nClass=Printer\r\n[Manufacturer]\r\n%HP%=HP,NTamd64\r\n");
+            }
+
+            File.WriteAllText(Path.Combine(directory, "hpvpl09.cat"), "x");
+            File.WriteAllText(Path.Combine(directory, "HPRestStubx64.CAT"), "x");
+
+            var paths = names.Select(n => Path.Combine(directory, n)).ToList();
+
+            var usb = OnlineDriverService.RankInfs(paths, usbTitle);
+            Assert.Equal("hpvpl09.inf", usb[0].FileName);
+
+            var rest = OnlineDriverService.RankInfs(paths, restTitle);
+            Assert.Equal("HPRestStub.INF", rest[0].FileName);
+
+            // 扫描仪与空桩在任何变体下都不该排第一
+            Assert.DoesNotContain(usb[0].FileName, new[] { "HPWia_DJ2520.INF", "nullprint.inf", "NullScan_DJ2520.INF" });
+            Assert.DoesNotContain(rest[0].FileName, new[] { "HPWia_DJ2520.INF", "nullprint.inf", "NullScan_DJ2520.INF" });
+
+            // 排序结果必须覆盖全部 INF,便于界面列表展示
+            Assert.Equal(names.Length, usb.Count);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData("HP", "HP Deskjet 2520 series", "https://www.catalog.update.microsoft.com/Search.aspx?q=HP%20Deskjet%202520%20series")]
     [InlineData("HP", "Deskjet 2520 series", "https://www.catalog.update.microsoft.com/Search.aspx?q=HP%20Deskjet%202520%20series")]

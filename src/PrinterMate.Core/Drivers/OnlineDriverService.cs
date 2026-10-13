@@ -333,6 +333,145 @@ public sealed class OnlineDriverService
         return "https://www.catalog.update.microsoft.com/Search.aspx?q=" + Uri.EscapeDataString(query);
     }
 
+    /// <summary>
+    /// 在解包目录里给所有 INF 打分排序。
+    ///
+    /// 为什么需要它:微软官方的一个 .cab 里常常同时打包了多个变体,例如 HP Deskjet 2520 的包里有
+    /// HPRestStub.INF(REST 传输桩)、hpvpl09.inf(真正的 USB 打印驱动)、HPWia_*.INF(扫描仪)、
+    /// NullScan/nullprint(空桩)。早期实现按文件名字母序取第一个,结果永远选中 HPRestStub.INF —
+    /// 用户下载的是 (USB) 包,装进去的却是 REST 驱动。
+    /// </summary>
+    public static IReadOnlyList<InfChoice> RankInfs(IEnumerable<string> infPaths, string? variantHint)
+    {
+        var hint = (variantHint ?? string.Empty).ToLowerInvariant();
+        var wantsUsb = hint.Contains("usb");
+        var wantsRest = hint.Contains("rest");
+        var wantsNull = hint.Contains("nullscannet") || hint.Contains("nullscan");
+
+        var results = new List<InfChoice>();
+
+        foreach (var infPath in infPaths)
+        {
+            var name = Path.GetFileName(infPath);
+            var lower = name.ToLowerInvariant();
+            var score = 0;
+            var reasons = new List<string>();
+
+            // 1) 扫描仪 / 空桩:默认重罚,只有在用户明确选了对应变体时才放宽
+            if (lower.Contains("wia") || lower.Contains("scan"))
+            {
+                score -= 200;
+                reasons.Add("扫描相关");
+            }
+
+            if (lower.Contains("null"))
+            {
+                score -= wantsNull ? 0 : 150;
+                reasons.Add(wantsNull ? "空桩(你选的正是该变体)" : "空桩,降权");
+            }
+
+            // 2) 按候选标题里的变体关键词匹配
+            if (wantsUsb)
+            {
+                if (lower.Contains("vpl") || lower.Contains("usb"))
+                {
+                    score += 120;
+                    reasons.Add("符合 USB 打印驱动");
+                }
+
+                if (lower.Contains("rest"))
+                {
+                    score -= 80;
+                    reasons.Add("这是 REST 传输桩,与 USB 包不符");
+                }
+            }
+
+            if (wantsRest && lower.Contains("rest"))
+            {
+                score += 120;
+                reasons.Add("符合 REST 变体");
+            }
+
+            if (wantsNull && lower.Contains("null"))
+            {
+                score += 120;
+                reasons.Add("符合 NullScanNet 变体");
+            }
+
+            // 3) 结构性信号:同一目录下有 .cat(可验证签名)、声明为打印机类
+            try
+            {
+                var directory = Path.GetDirectoryName(infPath);
+                if (directory is not null && Directory.Exists(directory))
+                {
+                    if (Directory.EnumerateFiles(directory, "*.cat").Any())
+                    {
+                        score += 30;
+                        reasons.Add("同目录有 .cat");
+                    }
+                    else
+                    {
+                        score -= 40;
+                        reasons.Add("同目录无 .cat,签名无法验证");
+                    }
+                }
+
+                var text = File.ReadAllText(infPath, System.Text.Encoding.Default);
+                if (text.Contains("Class=Printer", StringComparison.OrdinalIgnoreCase))
+                {
+                    score += 40;
+                    reasons.Add("声明为打印机类");
+                }
+
+                if (text.Contains("[Manufacturer]", StringComparison.OrdinalIgnoreCase))
+                {
+                    score += 20;
+                }
+            }
+            catch (Exception)
+            {
+                // 读不到内容就不给结构分,不影响排序的其它信号
+            }
+
+            // 4) 兜底:名字里带 "stub" 而无其它优势时降权
+            if (lower.Contains("stub") && !wantsRest)
+            {
+                score -= 40;
+                reasons.Add("桩文件,降权");
+            }
+
+            results.Add(new InfChoice(
+                infPath,
+                name,
+                score,
+                reasons.Count == 0 ? "无特殊信号" : string.Join(";", reasons),
+                OnlineDriverInstaller.ReadDriverNamesFromInf(infPath)));
+        }
+
+        return results
+            .OrderByDescending(c => c.Score)
+            .ThenBy(c => c.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>把驱动包解到目录并返回解包目录(不挑 INF)。</summary>
+    public OperationResult<string> ExtractPackage(string packagePath, string? extractDirectory = null)
+    {
+        var extension = Path.GetExtension(packagePath).ToLowerInvariant();
+        if (extension == ".inf")
+        {
+            return OperationResult<string>.Ok(Path.GetDirectoryName(packagePath) ?? string.Empty, "驱动包本身就是 INF 文件。");
+        }
+
+        var extracted = Extract(packagePath, extractDirectory);
+        if (!extracted.IsSuccess || extracted.Value is null)
+        {
+            return extracted;
+        }
+
+        return OperationResult<string>.Ok(Path.GetDirectoryName(extracted.Value) ?? string.Empty, "已解包。");
+    }
+
     /// <summary>查找 7-Zip(可选依赖,只用于解包,不用于执行任何安装器)。</summary>
     private static string? FindSevenZip()
     {
@@ -360,6 +499,17 @@ public sealed class OnlineDriverService
         var safe = Regex.Replace(candidate.DisplayName, @"[^\w\-\.]+", "_");
         return safe.Length > 80 ? safe[..80] + ".cab" : safe + ".cab";
     }
+}
+
+/// <summary>驱动包里一个可选 INF 的评估结果。</summary>
+public sealed record InfChoice(
+    string InfPath,
+    string FileName,
+    int Score,
+    string Reason,
+    IReadOnlyList<string> DriverNames)
+{
+    public string DisplayText => $"{FileName}({Score} 分)— {Reason}";
 }
 
 /// <summary>Microsoft Update Catalog 解析出的下载目标(含官方公布的哈希)。</summary>

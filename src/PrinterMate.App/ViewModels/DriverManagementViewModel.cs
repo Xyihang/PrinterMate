@@ -568,7 +568,9 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         try
         {
             OnlineStageText = "正在解包并校验驱动包 …";
-            var result = _online.ExtractAndVerify(_downloadedPackagePath);
+            // 把所下候选的标题作为变体提示传给解包环节:
+            // 一个 .cab 里常有多个变体(REST 桩 / VPL 打印驱动 / 扫描仪 / 空桩),必须挑对那个。
+            var result = _online.ExtractAndVerify(_downloadedPackagePath, SelectedOnlineCandidate?.DisplayName);
 
             if (!result.IsSuccess || result.Value is null)
             {
@@ -594,7 +596,10 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
                 + $"INF SHA256:{result.Value.InfSha256}\n"
                 + $"签名文件:{result.Value.CatalogPath}\n"
                 + $"签名主体:{result.Value.SignerSubject}\n"
-                + $"解析出 {OnlineDriverNames.Count} 个驱动名。";
+                + $"包内共有 {result.Value.InfCandidates.Count} 个 INF,已选:{result.Value.InfFileName}"
+                + $"(原因:{result.Value.ChoiceReason})\n"
+                + "全部候选:" + string.Join("、", result.Value.InfCandidates.Select(c => $"{c.FileName}({c.Score})"))
+                + $"\n解析出 {OnlineDriverNames.Count} 个驱动名。";
 
             StatusHub.Success("在线补齐", "驱动包已解包并通过 .cat 签名校验。", "确认驱动名后点击「③ 加入本机驱动库」。");
         }

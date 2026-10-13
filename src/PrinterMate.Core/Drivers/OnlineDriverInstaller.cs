@@ -20,7 +20,9 @@ public sealed record OnlinePackageResult(
     string InfSha256,
     string CatalogPath,
     string SignerSubject,
-    string Message);
+    string Message,
+    IReadOnlyList<InfChoice> InfCandidates,
+    string ChoiceReason);
 
 /// <summary>
 /// 在线补齐(L2)编排器。把「检索 → 下载 → 三重校验 → 解包 → 验证 → 入库」串成一条可解释的链路。
@@ -112,51 +114,97 @@ public sealed class OnlineDriverInstaller
             $"已下载并通过校验:{Path.GetFileName(filePath)}({size / 1024} KB)");
     }
 
-    /// <summary>解包并对解出来的驱动包做 SHA256 + .cat 签名验证。</summary>
-    public OperationResult<OnlinePackageResult> ExtractAndVerify(string packagePath)
+    /// <summary>
+    /// 解包并对解出来的驱动包做 SHA256 + .cat 签名验证。
+    ///
+    /// <paramref name="variantHint"/> 传入所下候选的标题(形如「… HP Deskjet 2520 series (USB)」),
+    /// 用于在同一个 .cab 内的多个 INF 变体(VPL 打印驱动 / REST 桩 / 扫描仪 / 空桩)中挑对那一个。
+    /// 会按分数从高到低依次尝试,取第一个签名校验通过的 —— 这样即使排序猜错也不会装错。
+    /// </summary>
+    public OperationResult<OnlinePackageResult> ExtractAndVerify(string packagePath, string? variantHint = null)
     {
-        var extract = _online.Extract(packagePath);
-        if (!extract.IsSuccess || extract.Value is null)
+        var extracted = _online.ExtractPackage(packagePath);
+        if (!extracted.IsSuccess || extracted.Value is null)
         {
             return new OperationResult<OnlinePackageResult>
             {
-                Status = extract.Status,
-                Message = extract.Message,
-                Suggestion = extract.Suggestion,
+                Status = extracted.Status,
+                Message = extracted.Message,
+                Suggestion = extracted.Suggestion,
             };
         }
 
-        var infPath = extract.Value;
-        var verification = DriverPackageVerifier.Verify(infPath);
+        var directory = extracted.Value;
+        var infPaths = Directory.Exists(directory)
+            ? Directory.EnumerateFiles(directory, "*.inf", SearchOption.AllDirectories).ToList()
+            : new List<string>();
 
-        if (!verification.Passed)
+        if (infPaths.Count == 0)
         {
-            _audit.Write("在线补齐-驱动包校验", infPath, "拒绝", verification.Message);
+            _audit.Write("在线补齐-解包", packagePath, "失败", "解包目录内没有任何 INF");
             return OperationResult<OnlinePackageResult>.Fail(
-                verification.Message,
-                verification.Suggestion,
-                OperationStatus.NotPermitted);
+                "解包后没有找到任何 INF 文件。",
+                "该压缩包可能不是打印机驱动包,请确认来源。");
         }
 
+        var ranked = OnlineDriverService.RankInfs(infPaths, variantHint);
         _audit.Write(
-            "在线补齐-驱动包校验通过",
-            infPath,
-            "成功",
-            verification.Message,
-            sourceUrl: string.Empty,
-            sha256: verification.Sha256,
-            signerSubject: verification.SignerSubject);
+            "在线补齐-INF 排序",
+            Path.GetFileName(packagePath),
+            "完成",
+            string.Join(" | ", ranked.Select(r => $"{r.FileName}={r.Score}({r.Reason})")));
 
-        return OperationResult<OnlinePackageResult>.Ok(
-            new OnlinePackageResult(
-                Path.GetDirectoryName(infPath) ?? string.Empty,
-                infPath,
-                Path.GetFileName(infPath),
-                verification.Sha256,
-                verification.CatalogPath,
-                verification.SignerSubject,
-                verification.Message),
-            verification.Message);
+        OnlinePackageResult? lastFailure = null;
+
+        foreach (var choice in ranked)
+        {
+            var verification = DriverPackageVerifier.Verify(choice.InfPath);
+
+            if (!verification.Passed)
+            {
+                lastFailure = new OnlinePackageResult(
+                    Path.GetDirectoryName(choice.InfPath) ?? directory,
+                    choice.InfPath,
+                    choice.FileName,
+                    verification.Sha256,
+                    verification.CatalogPath,
+                    verification.SignerSubject,
+                    verification.Message,
+                    ranked,
+                    choice.Reason);
+
+                _audit.Write("在线补齐-驱动包校验", choice.InfPath, "跳过", verification.Message);
+                continue;
+            }
+
+            _audit.Write(
+                "在线补齐-驱动包校验通过",
+                choice.InfPath,
+                "成功",
+                $"{verification.Message};选中原因={choice.Reason}",
+                sourceUrl: string.Empty,
+                sha256: verification.Sha256,
+                signerSubject: verification.SignerSubject);
+
+            return OperationResult<OnlinePackageResult>.Ok(
+                new OnlinePackageResult(
+                    Path.GetDirectoryName(choice.InfPath) ?? directory,
+                    choice.InfPath,
+                    choice.FileName,
+                    verification.Sha256,
+                    verification.CatalogPath,
+                    verification.SignerSubject,
+                    verification.Message,
+                    ranked,
+                    choice.Reason),
+                $"{verification.Message}(共发现 {ranked.Count} 个 INF,已选 {choice.FileName}:{choice.Reason})");
+        }
+
+        var failure = lastFailure!;
+        return OperationResult<OnlinePackageResult>.Fail(
+            failure.Message,
+            "包内所有 INF 都没能通过签名校验,请确认来源;或改用厂商官网的完整驱动包。",
+            OperationStatus.NotPermitted);
     }
 
     /// <summary>把已解包并验证过的驱动包收进本机驱动库。</summary>

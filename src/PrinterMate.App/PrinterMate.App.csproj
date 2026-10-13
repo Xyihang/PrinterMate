@@ -15,8 +15,9 @@
     <ProjectReference Include="..\PrinterMate.Elevated\PrinterMate.Elevated.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
-  <!-- 提权辅助进程必须与主程序同目录拷贝,主程序本身以 asInvoker 运行 -->
-  <Target Name="CopyElevatedHelper" AfterTargets="Build">
+  <!-- 提权辅助进程必须与主程序同目录拷贝,主程序本身以 asInvoker 运行。
+       单文件发布时不走这里:由发布脚本单独 publish 到 elevated\ 子目录,避免把非单文件版本混进来。 -->
+  <Target Name="CopyElevatedHelper" AfterTargets="Build" Condition="'$(PublishSingleFile)' != 'true'">
     <ItemGroup>
       <ElevatedFiles Include="$(MSBuildThisFileDirectory)..\PrinterMate.Elevated\bin\$(Configuration)\net8.0-windows\**\*.*" />
     </ItemGroup>

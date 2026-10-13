@@ -305,6 +305,43 @@ public class LocalMachineSmokeTests
     }
 
     [Fact]
+    public void 解包真实cab_必须选中USB打印驱动而不是REST桩()
+    {
+        var cab = Directory.Exists(OnlineDriverInstaller.DownloadDirectory)
+            ? Directory.EnumerateFiles(OnlineDriverInstaller.DownloadDirectory, "*.cab").FirstOrDefault()
+            : null;
+
+        if (cab is null)
+        {
+            _output.WriteLine("下载目录里没有 .cab,跳过。先执行一次「① 下载并校验」再跑本用例。");
+            return;
+        }
+
+        _output.WriteLine($"真实 cab:{cab}");
+
+        var installer = new OnlineDriverInstaller();
+        var result = installer.ExtractAndVerify(
+            cab,
+            "Hewlett-Packard  - Imaging - HP Deskjet 2520 series (USB)");
+
+        _output.WriteLine($"结果:{result.Message}");
+
+        if (result.Value is not null)
+        {
+            _output.WriteLine($"选中 INF:{result.Value.InfFileName}  原因:{result.Value.ChoiceReason}");
+            foreach (var candidate in result.Value.InfCandidates)
+            {
+                _output.WriteLine($"  {candidate.FileName,-24} {candidate.Score,5} 分  {candidate.Reason}");
+            }
+
+            Assert.Equal("hpvpl09.inf", result.Value.InfFileName);
+            Assert.DoesNotContain("RestStub", result.Value.InfFileName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.True(result.IsSuccess, $"{result.Message} | {result.Suggestion}");
+    }
+
+    [Fact]
     public void 白名单与审计日志_在本机可正常初始化()
     {
         var allowlist = DownloadSourceAllowlist.Default;

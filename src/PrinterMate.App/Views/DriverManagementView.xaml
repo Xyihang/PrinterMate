@@ -61,37 +61,6 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="内置驱动库状态(离线可用的关键)"/>
-            <TextBlock Style="{StaticResource Hint}" Text="{Binding LibraryHeadline}" FontWeight="Bold"/>
-
-            <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="{Binding ManifestSource, StringFormat=清单来源:{0}}"/>
-                    <TextBlock Text="{Binding Root, StringFormat=驱动库根目录:{0}}" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding ManifestPath, StringFormat=清单文件:{0}}" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding LibraryVersion, StringFormat=清单版本:{0}}"/>
-                    <TextBlock Text="{Binding ArchitectureText, StringFormat=当前架构 / 系统:{0}}"/>
-                    <TextBlock Margin="0,4,0,0" FontWeight="Bold"
-                               Text="{Binding UnavailableEntries, StringFormat=不可直接安装的条目数:{0}}"/>
-                </StackPanel>
-            </Border>
-
-            <Border Style="{StaticResource Card}"
-                    BorderBrush="#FFC02828"
-                    BorderThickness="1"
-                    Visibility="{Binding HasMissingPackages, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                    <TextBlock Text="{Binding MissingHeader}" FontWeight="Bold" Foreground="#FFC02828" TextWrapping="Wrap"/>
-                    <ItemsControl ItemsSource="{Binding MissingPackages}" Margin="0,4,0,0">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
-
             <TextBlock Style="{StaticResource SectionHeader}" Text="在线补齐(L2 · 仅白名单官方源)"/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
@@ -156,6 +125,37 @@
                     <TextBlock Margin="0,8,0,0" Text="{Binding OnlineStageText}" TextWrapping="Wrap"/>
                     <TextBlock Margin="0,4,0,0" Text="{Binding OnlineResultText}" TextWrapping="Wrap"
                                Foreground="#FF1B7F3B"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource SectionHeader}" Text="内置驱动库状态(离线可用的关键)"/>
+            <TextBlock Style="{StaticResource Hint}" Text="{Binding LibraryHeadline}" FontWeight="Bold"/>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding ManifestSource, StringFormat=清单来源:{0}}"/>
+                    <TextBlock Text="{Binding Root, StringFormat=驱动库根目录:{0}}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding ManifestPath, StringFormat=清单文件:{0}}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding LibraryVersion, StringFormat=清单版本:{0}}"/>
+                    <TextBlock Text="{Binding ArchitectureText, StringFormat=当前架构 / 系统:{0}}"/>
+                    <TextBlock Margin="0,4,0,0" FontWeight="Bold"
+                               Text="{Binding UnavailableEntries, StringFormat=不可直接安装的条目数:{0}}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}"
+                    BorderBrush="#FFC02828"
+                    BorderThickness="1"
+                    Visibility="{Binding HasMissingPackages, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding MissingHeader}" FontWeight="Bold" Foreground="#FFC02828" TextWrapping="Wrap"/>
+                    <ItemsControl ItemsSource="{Binding MissingPackages}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
 
