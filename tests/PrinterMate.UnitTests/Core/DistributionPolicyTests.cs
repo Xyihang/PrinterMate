@@ -13,6 +13,21 @@ internal static class TestPolicies
         => new(Path.Combine(Path.GetTempPath(), "pm-policy-" + Guid.NewGuid().ToString("N") + ".json"));
 }
 
+/// <summary>
+/// 加载「随包基线清单」:指向一个没有磁盘清单的目录,强制回落到嵌入资源。
+///
+/// 为什么需要它:DriverLibrary.ResolveDefaultRoot() 优先使用 %LOCALAPPDATA%\PrinterMate,
+/// 而用户在界面上导入驱动后,那份清单会被**合法地**改写(例如 HP 变为已入库、可分发)。
+/// 单测必须钉死基线,否则会在"用户用过本程序"的机器上假失败。
+/// </summary>
+internal static class TestLibrary
+{
+    public static DriverLibrary Shipped()
+        => DriverLibrary.Load(
+            Path.Combine(Path.GetTempPath(), "pm-empty-root-" + Guid.NewGuid().ToString("N")),
+            TestPolicies.Isolated());
+}
+
 public class DistributionPolicyTests
 {
     [Fact]
@@ -115,7 +130,7 @@ public class DistributionPolicyTests
     [Fact]
     public void 开启内置驱动后_拒绝原因应从授权变为缺少驱动包()
     {
-        var library = DriverLibrary.Load(policy: TestPolicies.Isolated());
+        var library = TestLibrary.Shipped();
         var hp = library.Entries.First(e => e.Brand == "HP" && e.Pdl == PrintDescriptionLanguage.PCL6);
 
         // 第一道闸门:清单红线未确认
@@ -134,7 +149,7 @@ public class DistributionPolicyTests
     [Fact]
     public void 驱动库状态应包含分发策略摘要()
     {
-        var status = DriverLibrary.Load(policy: TestPolicies.Isolated()).GetStatus("x64");
+        var status = TestLibrary.Shipped().GetStatus("x64");
 
         Assert.False(string.IsNullOrWhiteSpace(status.DistributionSummary));
         Assert.Contains("默认关闭", status.DistributionSummary);
