@@ -267,6 +267,20 @@ public sealed class OnlineDriverService
         return $"{b} {m}";
     }
 
+    /// <summary>
+    /// 构造 Microsoft Update Catalog 的搜索页地址(用于给用户人工兜底)。
+    /// </summary>
+    public static string BuildCatalogSearchUrl(string brand, string? model)
+    {
+        var query = BuildQuery(brand, model);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            query = "printer driver";
+        }
+
+        return "https://www.catalog.update.microsoft.com/Search.aspx?q=" + Uri.EscapeDataString(query);
+    }
+
     /// <summary>查找 7-Zip(可选依赖,只用于解包,不用于执行任何安装器)。</summary>
     private static string? FindSevenZip()
     {

@@ -338,6 +338,7 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
             else
             {
                 StatusHub.Warn("在线补齐", result.Message, result.Suggestion ?? string.Empty);
+                OfferManualSearch(result.Message, policyRejected: false);
             }
         }
         catch (Exception ex)
@@ -353,19 +354,80 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
     }
 
     private void OpenCatalog()
-    {
-        var keyword = string.Join(' ', new[] { OnlineBrand, OnlineKeyword }.Where(s => !string.IsNullOrWhiteSpace(s)));
-        var url = "https://www.catalog.update.microsoft.com/Search.aspx?q="
-                  + Uri.EscapeDataString(string.IsNullOrWhiteSpace(keyword) ? "printer driver" : keyword);
+        => OpenUrl(
+            OnlineDriverService.BuildCatalogSearchUrl(OnlineBrand, OnlineKeyword),
+            "已在浏览器中打开 Microsoft Update Catalog 搜索页。");
 
+    private void OpenUrl(string url, string message)
+    {
         try
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
-            StatusHub.Info("在线补齐", "已在浏览器中打开 Microsoft Update Catalog。", url);
+            StatusHub.Info("在线补齐", message, url);
         }
         catch (Exception ex)
         {
             StatusHub.Error("在线补齐", "打开浏览器失败:" + ex.Message, url);
+        }
+    }
+
+    /// <summary>
+    /// 兜底:检索不到 / 下载失败 / 解包失败时,询问用户是否自己打开搜索页去看。
+    /// 先给官方目录(Microsoft Update Catalog),用户拒绝后再问第三方驱动站(风险自担)。
+    /// 程序自身始终不下载、不安装这些站点的文件。
+    /// </summary>
+    private void OfferManualSearch(string reason, bool policyRejected)
+    {
+        var keyword = string.IsNullOrWhiteSpace(OnlineKeyword) ? OnlineBrand : OnlineKeyword.Trim();
+        var catalogUrl = OnlineDriverService.BuildCatalogSearchUrl(OnlineBrand, OnlineKeyword);
+
+        var headline = policyRejected
+            ? $"{reason}\n\n注意:这一步是被**安全策略**拒绝的,不是网络问题。"
+            : reason;
+
+        if (_services.Dialogs.Confirm(
+                "要自己去搜索页看看吗?",
+                $"{headline}\n\n是否打开 Microsoft 官方目录(Microsoft Update Catalog)的搜索页,"
+                + $"由你自己浏览并下载?\n\n检索词:「{keyword}」",
+                "打开官方目录",
+                "不用了"))
+        {
+            OpenUrl(catalogUrl, "已在浏览器中打开 Microsoft Update Catalog 搜索页。");
+            return;
+        }
+
+        var site = SelectedSite ?? ThirdPartyDriverSiteLauncher.Sites.FirstOrDefault();
+        if (site is null)
+        {
+            StatusHub.Info("在线补齐", "已取消,未打开任何搜索页。");
+            return;
+        }
+
+        if (!_services.Dialogs.Confirm(
+                "要打开第三方驱动站吗?",
+                $"{ThirdPartyDriverSiteLauncher.MandatoryWarning}\n\n将用检索词「{keyword}」打开「{site.DisplayName}」。",
+                "打开第三方站",
+                "取消"))
+        {
+            StatusHub.Info("在线补齐", "已取消,未打开任何搜索页。");
+            return;
+        }
+
+        var prepared = _siteLauncher.Prepare(site.Id, keyword);
+        if (!prepared.IsSuccess || prepared.Value is null)
+        {
+            StatusHub.Warn("在线补齐", prepared.Message, prepared.Suggestion ?? string.Empty);
+            return;
+        }
+
+        var opened = _siteLauncher.Open(prepared.Value);
+        if (opened.IsSuccess)
+        {
+            StatusHub.Warn("在线补齐", opened.Message, opened.Suggestion ?? string.Empty);
+        }
+        else
+        {
+            StatusHub.Error("在线补齐", opened.Message, opened.Suggestion ?? string.Empty);
         }
     }
 
@@ -403,6 +465,7 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
             {
                 OnlineResultText = result.Message;
                 StatusHub.Warn("在线补齐", result.Message, result.Suggestion ?? string.Empty);
+                OfferManualSearch(result.Message, result.Status == OperationStatus.NotPermitted);
                 return;
             }
 
@@ -449,6 +512,7 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
             {
                 OnlineResultText = result.Message;
                 StatusHub.Warn("在线补齐", result.Message, result.Suggestion ?? string.Empty);
+                OfferManualSearch(result.Message, result.Status == OperationStatus.NotPermitted);
                 return Task.CompletedTask;
             }
 

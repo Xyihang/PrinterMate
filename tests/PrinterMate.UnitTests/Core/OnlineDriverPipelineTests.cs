@@ -127,6 +127,15 @@ public class InfDriverNameParsingTests
     }
 
     [Theory]
+    [InlineData("HP", "HP Deskjet 2520 series", "https://www.catalog.update.microsoft.com/Search.aspx?q=HP%20Deskjet%202520%20series")]
+    [InlineData("HP", "Deskjet 2520 series", "https://www.catalog.update.microsoft.com/Search.aspx?q=HP%20Deskjet%202520%20series")]
+    [InlineData("", "", "https://www.catalog.update.microsoft.com/Search.aspx?q=printer%20driver")]
+    public void 官方目录搜索地址构造(string brand, string model, string expected)
+    {
+        Assert.Equal(expected, OnlineDriverService.BuildCatalogSearchUrl(brand, model));
+    }
+
+    [Theory]
     [InlineData("HP", "HP Deskjet 2520 series", "HP Deskjet 2520 series")]
     [InlineData("HP", "Deskjet 2520 series", "HP Deskjet 2520 series")]
     [InlineData("HP", "", "HP")]
