@@ -22,7 +22,7 @@
     {
       "brand": "Microsoft",
       "family": "PS Class Driver",
-      "pdl": "PS",
+      "pdl": "ClassDriver",
       "driverName": "Microsoft PS Class Driver",
       "infRelPath": "",
       "arch": [ "x64", "arm64" ],

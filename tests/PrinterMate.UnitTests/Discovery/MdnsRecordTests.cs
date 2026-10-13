@@ -109,7 +109,8 @@ public sealed class MdnsRecordTests
             Port: 515,
             Target: "legacy.local");
 
-        var printer = MdnsDiscovery.MapInstance("Legacy._printer._tcp.local", "_printer._tcp.local", srv, null, IPAddress.Parse("10.0.0.6"));
+        // 无 A 记录时,地址回退到 SRV 的 target 主机名。
+        var printer = MdnsDiscovery.MapInstance("Legacy._printer._tcp.local", "_printer._tcp.local", srv, null, null);
 
         Assert.Equal(ConnectionKind.Lpd, printer.Connection);
         Assert.True(printer.SupportsLpd);

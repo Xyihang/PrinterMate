@@ -7,7 +7,7 @@ namespace PrinterMate.Core.Infrastructure;
 /// WPP 开启后系统只允许内置类驱动,第三方 v3/v4 打印驱动安装会被拒绝,
 /// 程序必须提前降级到 L0 免驱通道,而不是等到安装失败。
 /// </summary>
-public sealed class WppModeDetector
+public class WppModeDetector
 {
     private const string PolicyKeyPath = @"SOFTWARE\Policies\Microsoft\Windows NT\Printers\WPP";
     private const string PolicyValueName = "WindowsProtectedPrintMode";
@@ -15,7 +15,7 @@ public sealed class WppModeDetector
     /// <summary>Windows 11 24H2(26100)起,新装系统默认启用 WPP。</summary>
     private const int WppDefaultBuild = 26100;
 
-    public WppModeStatus Detect()
+    public virtual WppModeStatus Detect()
     {
         try
         {

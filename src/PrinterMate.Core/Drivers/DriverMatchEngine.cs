@@ -179,7 +179,9 @@ public sealed class DriverMatchEngine
         }
 
         // ── 完全未识别 ──────────────────────────────
-        if (classDriver is not null)
+        // 注意:仅当类驱动对该设备真的可用(设备具备 IPP/WSD 能力)时才降级到 L0;
+        // 只有 USB 能力的老设备不能"假装"能用 IPP 类驱动。
+        if (classDriver is { Installable: true })
         {
             return new DriverDecision(
                 OperationStatus.Success,

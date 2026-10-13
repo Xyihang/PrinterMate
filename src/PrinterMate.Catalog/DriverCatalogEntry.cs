@@ -6,6 +6,9 @@ namespace PrinterMate.Catalog;
 [JsonConverter(typeof(JsonStringEnumConverter<PrintDescriptionLanguage>))]
 public enum PrintDescriptionLanguage
 {
+    /// <summary>未指定。作为默认值,避免漏填 pdl 的条目被误判为系统内置类驱动。</summary>
+    None = 0,
+
     ClassDriver,
     GDI,
     PCL6,
@@ -71,7 +74,7 @@ public sealed class DriverCatalogEntry
     public int Priority { get; init; } = 100;
 
     /// <summary>是否为系统内置类驱动,不需要任何驱动文件。</summary>
-    public bool IsInboxDriver => Pdl == PrintDescriptionLanguage.ClassDriver || string.IsNullOrWhiteSpace(InfRelPath);
+    public bool IsInboxDriver => Pdl == PrintDescriptionLanguage.ClassDriver;
 
     public override string ToString() => $"{Brand} {Family} [{Pdl}] {DriverName}";
 }

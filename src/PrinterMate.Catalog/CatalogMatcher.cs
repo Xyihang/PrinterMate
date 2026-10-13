@@ -210,7 +210,7 @@ public static class CatalogMatcher
         bool includeClassDrivers = false)
     {
         var entries = library.Entries
-            .Where(e => includeClassDrivers || e.Pdl != PrintDescriptionLanguage.ClassDriver)
+            .Where(e => includeClassDrivers || !e.IsInboxDriver)
             .ToList();
 
         if (entries.Count == 0)

@@ -102,7 +102,7 @@ public sealed class WsdMessagesTests
         var devices = WsdMessages.ParseProbeMatches(xml);
 
         Assert.Equal(2, devices.Count);
-        Assert.Equal(["10.0.0.1", "10.0.0.2"], devices.Select(WsdMessages.ExtractHost).ToArray());
+        Assert.Equal(new[] { "10.0.0.1", "10.0.0.2" }, devices.Select(WsdMessages.ExtractHost).ToArray());
     }
 
     [Theory]

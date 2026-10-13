@@ -1,0 +1,9 @@
+# 统一换行符,避免 Windows 上反复出现 LF/CRLF 警告
+* text=auto eol=lf
+*.slnx text eol=lf
+*.cs text diff=csharp
+*.ps1 text eol=crlf
+*.json text eol=lf
+*.xaml text eol=crlf
+*.csproj text eol=crlf
+*.md text eol=lf

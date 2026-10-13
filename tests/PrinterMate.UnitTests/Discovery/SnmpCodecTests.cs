@@ -1,3 +1,4 @@
+using PrinterMate.Core;
 using PrinterMate.Core.Discovery;
 using Xunit;
 
@@ -39,7 +40,7 @@ public sealed class SnmpCodecTests
 
         Assert.Equal(0x30, bytes[0]);
         Assert.Equal(0x59, bytes[1]);
-        Assert.Equal(bytes.Length - 2, 0x59);
+        Assert.Equal(0x59, bytes.Length - 2);
     }
 
     [Theory]
@@ -165,7 +166,7 @@ public sealed class SnmpCodecTests
     public void RenderValue_通用类型_渲染为可读文本()
     {
         Assert.Equal("42", SnmpCodec.RenderValue(SnmpCodec.TagInteger, [0x2A]));
-        Assert.Equal("4294967295", SnmpCodec.RenderValue(SnmpCodec.TagCounter64, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF]));
+        Assert.Equal("4294967295", SnmpCodec.RenderValue(SnmpCodec.TagCounter64, [0xFF, 0xFF, 0xFF, 0xFF]));
         Assert.Equal("255.255.255.0", SnmpCodec.RenderValue(SnmpCodec.TagIpAddress, [255, 255, 255, 0]));
         Assert.Equal("1.3.6.1.2.1.1.1.0", SnmpCodec.RenderValue(SnmpCodec.TagObjectIdentifier, SnmpCodec.EncodeOid("1.3.6.1.2.1.1.1.0")));
         Assert.Null(SnmpCodec.RenderValue(SnmpCodec.TagNull, []));

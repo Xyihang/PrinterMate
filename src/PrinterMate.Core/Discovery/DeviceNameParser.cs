@@ -12,8 +12,7 @@ public static class DeviceNameParser
     {
         ["hewlett-packard"] = "HP",
         ["hewlett"] = "HP",
-        ["hp "] = "HP",
-        ["hp-"] = "HP",
+        ["hp"] = "HP",
         ["samsung"] = "Samsung",
         ["canon"] = "Canon",
         ["epson"] = "Epson",
@@ -73,9 +72,22 @@ public static class DeviceNameParser
                 continue;
             }
 
+            var text = candidate.Trim();
+            var tokens = Regex.Split(text, @"[^\p{L}\p{N}]+")
+                .Where(t => t.Length > 0)
+                .ToArray();
+
             foreach (var keyword in VendorKeywords)
             {
-                if (candidate.Contains(keyword.Key, StringComparison.OrdinalIgnoreCase))
+                // 中日韩别名没有词边界问题,直接子串匹配;
+                // 拉丁短别名(如 hp、oki)只做整词匹配,避免 "Sharp" 命中 "hp"、"Php" 之类误判;
+                // 长别名(如 hewlett、kyocera)才允许子串匹配。
+                var hasCjk = keyword.Key.Any(c => c >= '\u2e80');
+                var matched = hasCjk || keyword.Key.Length >= 4
+                    ? text.Contains(keyword.Key, StringComparison.OrdinalIgnoreCase)
+                    : tokens.Any(t => t.Equals(keyword.Key, StringComparison.OrdinalIgnoreCase));
+
+                if (matched)
                 {
                     return keyword.Value;
                 }
