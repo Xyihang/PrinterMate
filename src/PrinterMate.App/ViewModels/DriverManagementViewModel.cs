@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using PrinterMate.App.Mvvm;
 using PrinterMate.App.Services;
 using PrinterMate.Catalog;
