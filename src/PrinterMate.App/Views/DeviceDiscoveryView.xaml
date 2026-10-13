@@ -1,0 +1,141 @@
+<UserControl x:Class="PrinterMate.App.Views.DeviceDiscoveryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+
+            <TextBlock Style="{StaticResource SectionHeader}" Text="设备发现与连接(USB 直连优先)"/>
+
+            <WrapPanel Margin="0,0,0,6">
+                <Button Content="扫描 USB 打印机" Command="{Binding ScanUsbCommand}"/>
+                <Button Content="扫描局域网" Command="{Binding ScanNetworkCommand}"/>
+                <Button Content="清除人工驱动" Command="{Binding ClearManualDriverCommand}"/>
+            </WrapPanel>
+
+            <TextBlock Style="{StaticResource Hint}" Text="{Binding ManualDriverText}"/>
+
+            <!-- ── USB ── -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="USB 直连打印机"/>
+            <TextBlock Style="{StaticResource Hint}" Text="{Binding UsbSummary}"/>
+
+            <DataGrid ItemsSource="{Binding UsbDevices}"
+                      SelectedItem="{Binding SelectedUsbDevice}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      HeadersVisibility="Column"
+                      Height="200"
+                      Margin="0,0,0,6"
+                      Visibility="{Binding HasUsbDevices, Converter={StaticResource BoolToVisibility}}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="设备名" Binding="{Binding DeviceName}" Width="2*"/>
+                    <DataGridTextColumn Header="型号" Binding="{Binding Model}" Width="2*"/>
+                    <DataGridTextColumn Header="端口" Binding="{Binding PortName}" Width="90"/>
+                    <DataGridTextColumn Header="状态" Binding="{Binding StateText}" Width="120"/>
+                    <DataGridTextColumn Header="驱动层" Binding="{Binding LayerText}" Width="80"/>
+                    <DataGridTemplateColumn Header="操作" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="一键连接"
+                                        Command="{Binding ConnectCommand}"
+                                        IsEnabled="{Binding CanConnect}"
+                                        MinWidth="86"
+                                        Margin="2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock Style="{StaticResource Hint}"
+                       Text="尚未检测到 USB 打印机。请确认打印机已开机并通过 USB 线连接本机,然后点击「扫描 USB 打印机」。"
+                       Visibility="{Binding HasNoUsbDevices, Converter={StaticResource BoolToVisibility}}"/>
+
+            <Border Style="{StaticResource Card}" Visibility="{Binding HasUsbDevices, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock FontWeight="Bold" Text="驱动决策详情(选中 USB 设备)"/>
+                    <TextBlock Text="{Binding SelectedUsbDevice.DeviceName, TargetNullValue=请在列表中选中一台设备}" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding SelectedUsbDevice.DecisionText}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding SelectedUsbDevice.SuggestionText}" TextWrapping="Wrap" Foreground="#FF8A5A00" Margin="0,2,0,0"/>
+                    <TextBlock Text="候选驱动:" FontWeight="Bold" Margin="0,6,0,0"/>
+                    <TextBlock Text="{Binding SelectedUsbDevice.CandidateText}" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ── 局域网 ── -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="局域网打印机与手动添加"/>
+            <TextBlock Style="{StaticResource Hint}" Text="{Binding NetworkSummary}"/>
+
+            <WrapPanel Margin="0,0,0,6">
+                <TextBlock Text="地址(IP / 主机名):" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox Width="200" Text="{Binding ManualAddress, UpdateSourceTrigger=PropertyChanged}" Padding="4,3" Margin="0,0,8,0"/>
+                <TextBlock Text="协议:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox Width="110" ItemsSource="{Binding Protocols}" SelectedItem="{Binding SelectedProtocol}" Margin="0,0,8,0"/>
+                <Button Content="手动添加" Command="{Binding AddManualCommand}"/>
+            </WrapPanel>
+
+            <DataGrid ItemsSource="{Binding NetworkDevices}"
+                      SelectedItem="{Binding SelectedNetworkDevice}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      HeadersVisibility="Column"
+                      Height="200"
+                      Margin="0,0,0,6"
+                      Visibility="{Binding HasNetworkDevices, Converter={StaticResource BoolToVisibility}}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="2*"/>
+                    <DataGridTextColumn Header="型号" Binding="{Binding Model}" Width="2*"/>
+                    <DataGridTextColumn Header="连接方式" Binding="{Binding ConnectionText}" Width="110"/>
+                    <DataGridTextColumn Header="地址" Binding="{Binding AddressText}" Width="140"/>
+                    <DataGridTextColumn Header="来源" Binding="{Binding SourceText}" Width="120"/>
+                    <DataGridTextColumn Header="驱动层" Binding="{Binding LayerText}" Width="80"/>
+                    <DataGridTemplateColumn Header="操作" Width="100">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="连接" Command="{Binding ConnectCommand}" MinWidth="70" Margin="2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock Style="{StaticResource Hint}"
+                       Text="尚未发现局域网打印机。可点击「扫描局域网」自动发现,或在上面输入 IP/主机名手动添加。"
+                       Visibility="{Binding HasNoNetworkDevices, Converter={StaticResource BoolToVisibility}}"/>
+
+            <Border Style="{StaticResource Card}" Visibility="{Binding HasNetworkDevices, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock FontWeight="Bold" Text="驱动决策详情(选中局域网设备)"/>
+                    <TextBlock Text="{Binding SelectedNetworkDevice.Name, TargetNullValue=请在列表中选中一台设备}" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding SelectedNetworkDevice.SuggestionText}" TextWrapping="Wrap" Foreground="#FF8A5A00" Margin="0,2,0,0"/>
+                    <TextBlock Text="候选驱动:" FontWeight="Bold" Margin="0,6,0,0"/>
+                    <TextBlock Text="{Binding SelectedNetworkDevice.CandidateText}" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ── 安装步骤 ── -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="最近一次安装/连接的执行明细"/>
+            <DataGrid ItemsSource="{Binding Steps}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      HeadersVisibility="Column"
+                      MaxHeight="240"
+                      Visibility="{Binding HasSteps, Converter={StaticResource BoolToVisibility}}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="步骤" Binding="{Binding StepText}" Width="110"/>
+                    <DataGridTextColumn Header="状态" Binding="{Binding StateText}" Width="70"/>
+                    <DataGridTextColumn Header="说明" Binding="{Binding Message}" Width="3*"/>
+                    <DataGridTextColumn Header="命令" Binding="{Binding CommandText}" Width="3*"/>
+                    <DataGridTextColumn Header="返回码" Binding="{Binding ExitCodeText}" Width="70"/>
+                    <DataGridTextColumn Header="耗时" Binding="{Binding DurationText}" Width="70"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <TextBlock Style="{StaticResource Hint}"
+                       Text="尚未执行安装。连接设备后,这里会实时显示每一步的命令与返回码。"
+                       Visibility="{Binding HasNoSteps, Converter={StaticResource BoolToVisibility}}"/>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

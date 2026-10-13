@@ -1,0 +1,94 @@
+<UserControl x:Class="PrinterMate.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+
+            <TextBlock Style="{StaticResource SectionHeader}" Text="默认打印机"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding DefaultPrinter, StringFormat=系统当前默认打印机:{0}}" FontWeight="Bold" TextWrapping="Wrap"/>
+                    <WrapPanel Margin="0,6,0,0">
+                        <TextBlock Text="选择打印机:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Width="320" ItemsSource="{Binding Printers}" SelectedItem="{Binding SelectedPrinter}"
+                                  DisplayMemberPath="Name" Margin="0,0,10,0"/>
+                        <Button Content="设为默认打印机" Command="{Binding SetDefaultPrinterCommand}"/>
+                        <Button Content="打开系统打印机管理" Command="{Binding OpenPrinterSettingsCommand}"/>
+                        <Button Content="刷新" Command="{Binding RefreshCommand}"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource SectionHeader}" Text="Windows Protected Print Mode(WPP)"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding WppStateText}" FontWeight="Bold" TextWrapping="Wrap"
+                               Foreground="{Binding WppEnabled, Converter={StaticResource InverseBoolToBrush}}"/>
+                    <TextBlock Text="{Binding WppSource, StringFormat=检测来源:{0}}" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding WppDetail}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#FF666666"
+                               Text="WPP 启用后,系统只允许内置类驱动,第三方打印驱动安装会被拒绝。程序会自动降级到 L0 免驱通道。"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource SectionHeader}" Text="审计日志"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding AuditDirectory, StringFormat=日志目录:{0}}" TextWrapping="Wrap"/>
+                    <WrapPanel Margin="0,6,0,0">
+                        <Button Content="打开日志目录" Command="{Binding OpenLogFolderCommand}"/>
+                    </WrapPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#FF666666"
+                               Text="所有安装、测试页与驱动校验操作都会按天写入 audit-YYYYMMDD.jsonl,一行一条 JSON,便于审计与排障。"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource SectionHeader}" Text="下载源白名单(只读)"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding WhitelistError}" TextWrapping="Wrap"
+                               Foreground="#FFC02828"
+                               Visibility="{Binding HasWhitelistError, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <TextBlock Text="微软官方更新服务域名:" FontWeight="Bold"/>
+                    <ItemsControl ItemsSource="{Binding MicrosoftDomains}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Margin="12,1,0,0"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="厂商官方域名:" FontWeight="Bold" Margin="0,6,0,0"/>
+                    <ItemsControl ItemsSource="{Binding VendorDomains}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayText}" Margin="12,1,0,0"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#FF666666"
+                               Text="白名单仅用于后续版本的在线驱动补齐(L2),本版本不会发起任何驱动下载请求。"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource SectionHeader}" Text="环境信息(只读)"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding SystemVersion, StringFormat=系统版本:{0}}"/>
+                    <TextBlock Text="{Binding SystemBuild, StringFormat=系统内部版本:{0}}"/>
+                    <TextBlock Text="{Binding ArchitectureText, StringFormat=架构:{0}}"/>
+                    <TextBlock Text="{Binding RuntimeText, StringFormat=运行库:{0}}"/>
+
+                    <TextBlock Text="{Binding PowerShellText, StringFormat=PowerShell:{0}}" TextWrapping="Wrap"
+                               Foreground="{Binding PowerShellAvailable, Converter={StaticResource BoolToBrush}}"/>
+                    <TextBlock Text="{Binding HelperText, StringFormat=提权辅助进程:{0}}" TextWrapping="Wrap"
+                               Foreground="{Binding HelperAvailable, Converter={StaticResource BoolToBrush}}"/>
+                    <TextBlock Text="{Binding ElevationText}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

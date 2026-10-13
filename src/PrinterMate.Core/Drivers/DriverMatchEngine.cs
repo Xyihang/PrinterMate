@@ -117,13 +117,21 @@ public sealed class DriverMatchEngine
         var installable = builtin.Where(b => b.Candidate.Installable).ToList();
         if (installable.Count > 0)
         {
-            var topScore = installable.Max(b => b.Match.Score);
-            var top = installable.Where(b => b.Match.Score == topScore).ToList();
-            var confident = top[0].Match.Confidence == MatchConfidence.High;
+            // 规格:同品牌 PCL6/PS 并存时默认选 PCL6;只有跨家族并列时才让用户人工选择。
+            var ordered = installable
+                .OrderByDescending(b => b.Match.Score)
+                .ThenBy(b => PdlRank(b.Candidate.Pdl))
+                .ThenByDescending(b => b.Match.Entry.Priority)
+                .ToList();
 
-            if (confident && top.Select(t => t.Candidate.DriverName).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1)
+            var topScore = ordered[0].Match.Score;
+            var topGroup = ordered.Where(b => b.Match.Score == topScore).ToList();
+            var confident = ordered[0].Match.Confidence == MatchConfidence.High;
+            var families = topGroup.Select(b => b.Candidate.Family).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+
+            if (confident && families == 1)
             {
-                var chosen = top[0].Candidate;
+                var chosen = ordered[0].Candidate;
                 return new DriverDecision(
                     OperationStatus.Success,
                     "L1",
@@ -139,14 +147,16 @@ public sealed class DriverMatchEngine
                 "L1",
                 null,
                 candidates,
-                "匹配到多个可用驱动,需要你确认使用哪一个。",
+                "匹配到多个不同家族的驱动,需要你确认使用哪一个。",
                 "通常优先选择 PCL6 通用驱动;若打印出现字体缺失或乱码,可改用 PostScript 驱动。",
                 RequiresDownload: false);
         }
 
         // ── L2:在线补齐 ─────────────────────────────
+        // 规格:同品牌 PCL6/PS 并存时默认选 PCL6,不能被 priority 覆盖。
         var bestBuiltin = builtin
             .OrderByDescending(b => b.Match.Score)
+            .ThenBy(b => PdlRank(b.Candidate.Pdl))
             .ThenByDescending(b => b.Match.Entry.Priority)
             .FirstOrDefault();
 
@@ -200,6 +210,16 @@ public sealed class DriverMatchEngine
             "请在驱动管理页手动选择品牌与型号,或使用厂商官方安装包。",
             candidates);
     }
+
+    /// <summary>PDL 优先级:PCL6 优于 PS(规格:同品牌并存时默认 PCL6)。</summary>
+    private static int PdlRank(PrintDescriptionLanguage? pdl) => pdl switch
+    {
+        PrintDescriptionLanguage.PCL6 => 0,
+        PrintDescriptionLanguage.PS => 1,
+        PrintDescriptionLanguage.GDI => 2,
+        PrintDescriptionLanguage.ClassDriver => 3,
+        _ => 4,
+    };
 
     /// <summary>构造 L0 免驱候选。</summary>
     private DriverCandidate? BuildClassDriverCandidate(DiscoveredPrinter printer)

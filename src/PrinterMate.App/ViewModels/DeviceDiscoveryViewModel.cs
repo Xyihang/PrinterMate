@@ -17,6 +17,8 @@ public sealed class DeviceDiscoveryViewModel : ObservableObject
     private string _networkSummary = "尚未扫描局域网。";
     private string _manualAddress = string.Empty;
     private string _selectedProtocol = "IPP";
+    private UsbDeviceRow? _selectedUsbDevice;
+    private NetworkDeviceRow? _selectedNetworkDevice;
 
     public DeviceDiscoveryViewModel(AppServices services)
     {
@@ -91,9 +93,27 @@ public sealed class DeviceDiscoveryViewModel : ObservableObject
 
     public bool HasSteps => Steps.Count > 0;
 
+    public bool HasNoSteps => Steps.Count == 0;
+
     public bool HasUsbDevices => UsbDevices.Count > 0;
 
     public bool HasNetworkDevices => NetworkDevices.Count > 0;
+
+    public bool HasNoUsbDevices => UsbDevices.Count == 0;
+
+    public bool HasNoNetworkDevices => NetworkDevices.Count == 0;
+
+    public UsbDeviceRow? SelectedUsbDevice
+    {
+        get => _selectedUsbDevice;
+        set => SetProperty(ref _selectedUsbDevice, value);
+    }
+
+    public NetworkDeviceRow? SelectedNetworkDevice
+    {
+        get => _selectedNetworkDevice;
+        set => SetProperty(ref _selectedNetworkDevice, value);
+    }
 
     public void RefreshManualDriver()
     {
@@ -174,6 +194,7 @@ public sealed class DeviceDiscoveryViewModel : ObservableObject
         }
 
         OnPropertyChanged(nameof(HasUsbDevices));
+        OnPropertyChanged(nameof(HasNoUsbDevices));
     }
 
     private async Task ConnectUsbAsync(UsbDeviceRow row)
@@ -194,7 +215,7 @@ public sealed class DeviceDiscoveryViewModel : ObservableObject
         try
         {
             Steps.Clear();
-            OnPropertyChanged(nameof(HasSteps));
+            RaiseSteps();
 
             var device = row.Info;
 
@@ -500,6 +521,8 @@ public sealed class DeviceDiscoveryViewModel : ObservableObject
         var row = new NetworkDeviceRow(device, decision);
         row.ConnectCommand = new AsyncRelayCommand(() => ConnectNetworkAsync(row));
         NetworkDevices.Add(row);
+        OnPropertyChanged(nameof(HasNetworkDevices));
+        OnPropertyChanged(nameof(HasNoNetworkDevices));
     }
 
     private async Task ConnectNetworkAsync(NetworkDeviceRow row)
@@ -520,12 +543,25 @@ public sealed class DeviceDiscoveryViewModel : ObservableObject
         try
         {
             Steps.Clear();
-            OnPropertyChanged(nameof(HasSteps));
+            RaiseSteps();
 
             StatusHub.Info("准备连接", $"正在为「{row.Name}」匹配驱动 …");
 
             var device = row.Device;
-            var decision = await Task.Run(() => _services.MatchEngine!.Decide(device, preferDriverFree: true));
+            var manual = _services.ManualCandidate;
+            if (manual is not null && !manual.Installable)
+            {
+                StatusHub.Warn(
+                    "连接打印机",
+                    $"人工指定的驱动「{manual.DriverName}」当前不可用:{manual.BlockReason}",
+                    "请在「驱动管理」页重新选择可用的驱动,或清除人工选择后重试。");
+                return;
+            }
+
+            var decision = manual is not null
+                ? InstallHelper.ManualDecision(manual)
+                : await Task.Run(() => _services.MatchEngine!.Decide(device, preferDriverFree: true));
+
             row.ApplyDecision(decision);
 
             if (decision.Selected is null)
@@ -592,7 +628,13 @@ public sealed class DeviceDiscoveryViewModel : ObservableObject
             Steps.Add(new StepRow(step));
         }
 
+        RaiseSteps();
+    }
+
+    private void RaiseSteps()
+    {
         OnPropertyChanged(nameof(HasSteps));
+        OnPropertyChanged(nameof(HasNoSteps));
     }
 
     private static ConnectionKind ToConnectionKind(string? protocol) => protocol switch

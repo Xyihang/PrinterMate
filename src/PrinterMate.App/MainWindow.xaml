@@ -1,0 +1,94 @@
+<Window x:Class="PrinterMate.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:PrinterMate.App.ViewModels"
+        xmlns:views="clr-namespace:PrinterMate.App.Views"
+        Title="PrinterMate 打印机工具"
+        Height="780" Width="1220"
+        MinHeight="560" MinWidth="960"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        Background="#FFF5F6F8">
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:DeviceDiscoveryViewModel}">
+            <views:DeviceDiscoveryView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DriverManagementViewModel}">
+            <views:DriverManagementView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PrintingViewModel}">
+            <views:PrintingView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:QueueViewModel}">
+            <views:QueueView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+            <views:SettingsView/>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 顶部状态条:左侧当前操作,右侧结果与建议 -->
+        <Border Grid.Row="0" Background="#FF23303D" Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0"
+                           Text="{Binding OperationText}"
+                           Foreground="White"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Top"/>
+
+                <TextBlock Grid.Row="0" Grid.Column="1"
+                           Text="{Binding ResultText}"
+                           Foreground="{Binding Level, Converter={StaticResource StatusLevelBrush}}"
+                           Background="White"
+                           Padding="8,3"
+                           TextWrapping="Wrap"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="1"
+                           Text="{Binding SuggestionText}"
+                           Foreground="#FFFFD18A"
+                           TextWrapping="Wrap"
+                           Margin="0,4,0,0"
+                           Visibility="{Binding HasSuggestion, Converter={StaticResource BoolToVisibility}}"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="#FFE9EDF2" BorderBrush="#FFD0D7DE" BorderThickness="0,0,1,0">
+                <ListBox ItemsSource="{Binding Pages}"
+                         SelectedItem="{Binding SelectedPage}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="6">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Title}" Padding="6,8" FontSize="13"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <ContentControl Grid.Column="1" Content="{Binding SelectedPage.ViewModel}" Margin="12"/>
+        </Grid>
+    </Grid>
+</Window>

@@ -381,6 +381,18 @@ public class DriverMatchEngineTests
     }
 
     [Fact]
+    public void L2兜底必须优先选择PCL6而不是PS()
+    {
+        // 回归用例:HP 的 PS 条目 priority(110)高于 PCL6(100),
+        // 早期实现按 priority 排序导致默认选了 PS,违反规格"同品牌并存时默认 PCL6"。
+        var decision = Engine().Decide(UsbPrinter());
+
+        Assert.NotNull(decision.Selected);
+        Assert.Equal(PrintDescriptionLanguage.PCL6, decision.Selected!.Pdl);
+        Assert.Equal("HP Universal Printing PCL 6", decision.Selected.DriverName);
+    }
+
+    [Fact]
     public void 人工候选列表应支持按品牌过滤()
     {
         var candidates = Engine().ListManualCandidates("HP");
