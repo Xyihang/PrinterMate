@@ -273,7 +273,13 @@ public static class CatalogMatcher
                         matches.Add(new CatalogMatch(entry, MatchKind.ModelPattern, score, MatchConfidence.High,
                             $"型号 {normalized} 命中模式 {pattern}"));
                     }
-                    else if (normalized.Contains(normalizedPattern.TrimEnd('*').Trim(), StringComparison.OrdinalIgnoreCase))
+                    var literal = normalizedPattern.TrimEnd('*').Trim();
+
+                    // 包含匹配要求固定前缀至少 3 个字符:
+                    // 否则 "C*" / "B*" / "P*" 这类过短模式会命中任何含该字母的型号
+                    // (例如 Xerox 的 "C*" 会误命中 "Canon MG6300")。短模式仍可通过上面的整串匹配生效。
+                    if (literal.Length >= 3
+                        && normalized.Contains(literal, StringComparison.OrdinalIgnoreCase))
                     {
                         var score = 420 + LiteralPrefixLength(normalizedPattern);
                         matches.Add(new CatalogMatch(entry, MatchKind.ModelPattern, score,

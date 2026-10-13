@@ -263,10 +263,11 @@ public class CatalogMatcherTests
     [Fact]
     public void 未知品牌不应命中内置清单()
     {
+        // 刻意用一个不存在的品牌,避免以后新增品牌时这条用例失效
         var input = new DeviceMatchInput(
-            Model: "Zebra ZD421",
-            Vendor: "Zebra",
-            HardwareIds: new[] { "USBPRINT\\ZEBRA_ZD421" },
+            Model: "Acme X1000",
+            Vendor: "Acme",
+            HardwareIds: new[] { "USBPRINT\\ACME_X1000" },
             CompatibleIds: Array.Empty<string>());
 
         Assert.Empty(CatalogMatcher.Match(Library, input));
@@ -364,20 +365,20 @@ public class DriverMatchEngineTests
     {
         var printer = new DiscoveredPrinter
         {
-            Id = "pnp:zebra",
-            DisplayName = "Zebra ZD421",
-            Model = "Zebra ZD421",
-            Vendor = "Zebra",
+            Id = "pnp:acme",
+            DisplayName = "Acme X1000",
+            Model = "Acme X1000",
+            Vendor = "Acme",
             Connection = ConnectionKind.Usb,
             PortName = "USB005",
-            HardwareIds = new[] { "USBPRINT\\ZEBRA_ZD421" },
+            HardwareIds = new[] { "USBPRINT\\ACME_X1000" },
         };
 
         var decision = Engine().Decide(printer);
 
         Assert.Null(decision.Selected);
         Assert.Equal(OperationStatus.Failed, decision.Status);
-        Assert.Contains("Zebra", decision.Message);
+        Assert.Contains("Acme", decision.Message);
     }
 
     [Fact]
