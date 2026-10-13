@@ -9,7 +9,7 @@ public sealed record OnlineRetrievalResult(
     string Sha256,
     string SignerSubject,
     long Size,
-    Uri Source,
+    string Source,
     TimeSpan Elapsed);
 
 /// <summary>解包并验证驱动包的结果。</summary>
@@ -101,8 +101,14 @@ public sealed class OnlineDriverInstaller
             sha,
             signature.SignerSubject);
 
+        // 注意:对 Microsoft Update Catalog 的候选,Url 字段存放的是 updateId(GUID)而不是 URL,
+        // 直接 new Uri() 会抛 UriFormatException。这里做无异常解析,保留原始标识即可。
+        var source = Uri.TryCreate(candidate.Url, UriKind.Absolute, out var parsed)
+            ? parsed.ToString()
+            : candidate.Url;
+
         return OperationResult<OnlineRetrievalResult>.Ok(
-            new OnlineRetrievalResult(filePath, sha, signature.SignerSubject, size, new Uri(candidate.Url), DateTimeOffset.Now - started),
+            new OnlineRetrievalResult(filePath, sha, signature.SignerSubject, size, source, DateTimeOffset.Now - started),
             $"已下载并通过校验:{Path.GetFileName(filePath)}({size / 1024} KB)");
     }
 

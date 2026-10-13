@@ -135,7 +135,12 @@
                                 Command="{Binding ExtractOnlineCommand}"/>
                         <Button Content="③ 加入本机驱动库" Padding="12,4"
                                 Command="{Binding ImportOnlineCommand}"/>
+                        <Button Content="选择本地驱动包…" Padding="12,4" Margin="14,0,0,0"
+                                Command="{Binding PickLocalPackageCommand}"
+                                ToolTip="用于接手你自己从浏览器下载的驱动包(.cab / .zip / .exe / .inf)"/>
                     </WrapPanel>
+                    <TextBlock Margin="0,4,0,0" Foreground="#FF666666" TextWrapping="Wrap"
+                               Text="如果你是从浏览器手动下载的驱动包,点「选择本地驱动包…」指定它,再走 ②③ 即可(程序会接手校验、解包与入库)。"/>
 
                     <ProgressBar Height="6" Margin="0,10,0,0" IsIndeterminate="True"
                                  Visibility="{Binding OnlineBusy, Converter={StaticResource BoolToVisibility}}"/>

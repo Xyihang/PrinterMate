@@ -183,6 +183,7 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         DownloadOnlineCommand = new AsyncRelayCommand(() => DownloadOnlineAsync(), () => !OnlineBusy && SelectedOnlineCandidate is not null);
         ExtractOnlineCommand = new AsyncRelayCommand(() => ExtractOnlineAsync(), () => !OnlineBusy && _downloadedPackagePath is not null);
         ImportOnlineCommand = new AsyncRelayCommand(() => ImportOnlineAsync(), () => !OnlineBusy && _package is not null);
+        PickLocalPackageCommand = new RelayCommand(PickLocalPackage, () => !OnlineBusy);
 
         foreach (var site in ThirdPartyDriverSiteLauncher.Sites)
         {
@@ -232,6 +233,9 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
 
     public AsyncRelayCommand ImportOnlineCommand { get; }
 
+    /// <summary>接手用户自己下载的驱动包(浏览器下载的文件不在程序下载目录里)。</summary>
+    public RelayCommand PickLocalPackageCommand { get; }
+
     public string OnlineHint =>
         "只从白名单官方源获取:Microsoft Update Catalog。下载后强制校验 HTTPS 证书、SHA256 与 Authenticode 数字签名,"
         + "任一不通过都会拒绝并写入审计日志。检索不到时不会静默降级,会给出官方下载页指引。";
@@ -247,6 +251,7 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
                 DownloadOnlineCommand.RaiseCanExecuteChanged();
                 ExtractOnlineCommand.RaiseCanExecuteChanged();
                 ImportOnlineCommand.RaiseCanExecuteChanged();
+                PickLocalPackageCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -491,6 +496,62 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
             ExtractOnlineCommand.RaiseCanExecuteChanged();
             ImportOnlineCommand.RaiseCanExecuteChanged();
         }
+    }
+
+    /// <summary>
+    /// 选择本地驱动包。用于接手「从浏览器手动下载」的包 ——
+    /// 那些文件在用户自己的下载目录里,程序无法自动感知,必须由用户指定。
+    /// </summary>
+    private void PickLocalPackage()
+    {
+        string? path;
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "选择已下载的驱动包",
+                Filter = "驱动包 (*.cab;*.zip;*.exe;*.msi;*.inf)|*.cab;*.zip;*.exe;*.msi;*.inf|所有文件 (*.*)|*.*",
+                CheckFileExists = true,
+                Multiselect = false,
+            };
+
+            path = dialog.ShowDialog() == true ? dialog.FileName : null;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("driver-package-dialog", ex.ToString());
+            StatusHub.Error("在线补齐", "打开文件选择器失败:" + ex.Message);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        _downloadedPackagePath = path;
+        _package = null;
+        OnlineDriverNames.Clear();
+        OnPropertyChanged(nameof(HasOnlineDriverNames));
+
+        var sizeText = "未知";
+        try
+        {
+            sizeText = $"{new FileInfo(path).Length / 1024} KB";
+        }
+        catch (Exception)
+        {
+            // 取不到大小不影响流程
+        }
+
+        OnlineResultText =
+            $"已选择本地驱动包:\n{path}\n大小:{sizeText}\n"
+            + "请点击「② 解包并验证驱动包」继续 —— 会解包并校验包内 .cat 的数字签名。";
+
+        StatusHub.Info("在线补齐", "已选择本地驱动包。", "接着点击「② 解包并验证驱动包」。");
+
+        ExtractOnlineCommand.RaiseCanExecuteChanged();
+        ImportOnlineCommand.RaiseCanExecuteChanged();
     }
 
     private Task ExtractOnlineAsync()
