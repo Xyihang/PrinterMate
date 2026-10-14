@@ -164,8 +164,11 @@
                     BorderBrush="#FFC02828"
                     BorderThickness="1"
                     Visibility="{Binding HasMissingPackages, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                    <TextBlock Text="{Binding MissingHeader}" FontWeight="Bold" Foreground="#FFC02828" TextWrapping="Wrap"/>
+                <Expander IsExpanded="False">
+                    <Expander.Header>
+                        <TextBlock Text="{Binding MissingHeader}" FontWeight="Bold" Foreground="#FFC02828" TextWrapping="Wrap"/>
+                    </Expander.Header>
+                    <StackPanel>
                     <ItemsControl ItemsSource="{Binding MissingPackages}" Margin="0,4,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -173,14 +176,18 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                </StackPanel>
+                    </StackPanel>
+                </Expander>
             </Border>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="内置驱动许可(本机授权开关)"/>
             <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="{Binding PolicyHint}" TextWrapping="Wrap" Foreground="#FF666666"/>
-                    <TextBlock Margin="0,6,0,0" Text="{Binding PolicySummary, StringFormat=当前策略:{0}}" TextWrapping="Wrap" FontWeight="Bold"/>
+                <Expander IsExpanded="False">
+                    <Expander.Header>
+                        <TextBlock Text="{Binding PolicySummary, StringFormat=当前策略:{0}}" TextWrapping="Wrap" FontWeight="Bold"/>
+                    </Expander.Header>
+                    <StackPanel>
+                    <TextBlock Text="{Binding PolicyHint}" TextWrapping="Wrap" Foreground="#FF666666" Margin="0,4,0,0"/>
 
                     <CheckBox Margin="0,8,0,0"
                               Content="允许全部品牌使用内置驱动(仅本机个人使用)"
@@ -198,19 +205,27 @@
                                                     Binding="{Binding IsBuiltinAllowed, UpdateSourceTrigger=PropertyChanged}"/>
                         </DataGrid.Columns>
                     </DataGrid>
-                </StackPanel>
+                    </StackPanel>
+                </Expander>
             </Border>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="各品牌可用性统计"/>
-            <DataGrid Style="{StaticResource EmbeddedGrid}" ItemsSource="{Binding BrandSummaries}">
+            <Expander IsExpanded="False" Margin="0,10,0,0">
+                <Expander.Header>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="各品牌可用性统计"/>
+                </Expander.Header>
+                <DataGrid Style="{StaticResource EmbeddedGrid}" ItemsSource="{Binding BrandSummaries}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="品牌" Binding="{Binding Brand}" Width="180"/>
                     <DataGridTextColumn Header="条目统计" Binding="{Binding SummaryText}" Width="*"/>
                 </DataGrid.Columns>
-            </DataGrid>
+                </DataGrid>
+            </Expander>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="全部内置驱动条目(按品牌分组,可展开)"/>
-            <TreeView Style="{StaticResource EmbeddedTree}" ItemsSource="{Binding BrandGroups}">
+            <Expander IsExpanded="False" Margin="0,10,0,0">
+                <Expander.Header>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="全部内置驱动条目(按品牌分组,可展开)"/>
+                </Expander.Header>
+                <TreeView Style="{StaticResource EmbeddedTree}" ItemsSource="{Binding BrandGroups}">
                 <TreeView.ItemTemplate>
                     <HierarchicalDataTemplate ItemsSource="{Binding Entries}">
                         <TextBlock Text="{Binding Header}" FontWeight="Bold" Margin="0,2"/>
@@ -230,7 +245,8 @@
                         </HierarchicalDataTemplate.ItemTemplate>
                     </HierarchicalDataTemplate>
                 </TreeView.ItemTemplate>
-            </TreeView>
+                </TreeView>
+            </Expander>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="人工选择驱动(自动匹配失败时使用)"/>
             <WrapPanel Margin="0,0,0,6">
