@@ -4,43 +4,149 @@
              xmlns:conv="clr-namespace:PrinterMate.App.Converters"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <conv:StatusLevelBrushConverter x:Key="StatusLevelBrush"/>
-        <conv:BoolToBrushConverter x:Key="BoolToBrush"/>
-        <conv:InverseBoolToBrushConverter x:Key="InverseBoolToBrush"/>
-        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility"/>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 设计令牌层:唯一的颜色/字号/间距/圆角来源(TASK-001 / TASK-002) -->
+                <ResourceDictionary Source="Resources/Tokens.xaml"/>
+                <!-- 矢量图标(TASK-003) -->
+                <ResourceDictionary Source="Resources/Icons.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
 
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="MinWidth" Value="86"/>
-            <Setter Property="FontFamily" Value="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"/>
-        </Style>
+            <conv:StatusLevelBrushConverter x:Key="StatusLevelBrush"/>
+            <conv:BoolToBrushConverter x:Key="BoolToBrush"/>
+            <conv:InverseBoolToBrushConverter x:Key="InverseBoolToBrush"/>
+            <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
-        <Style TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"/>
-            <Setter Property="FontSize" Value="12"/>
-        </Style>
+            <!-- ============ 基础控件样式 ============ -->
+            <!-- 说明:此处只做"最小必要"的样式重置。
+                 完整的控件模板(Hover/Pressed/Focus 全状态)在 TASK-005 落地。 -->
 
-        <Style x:Key="SectionHeader" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Margin" Value="0,10,0,6"/>
-            <Setter Property="Foreground" Value="#FF1F2A37"/>
-        </Style>
+            <Style TargetType="Button">
+                <Setter Property="Padding" Value="{StaticResource Padding.Control}"/>
+                <Setter Property="Margin" Value="0,0,8,0"/>
+                <Setter Property="MinWidth" Value="86"/>
+                <Setter Property="MinHeight" Value="30"/>
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+                <Setter Property="Background" Value="{StaticResource Brush.ControlBackground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Brush.ControlBorder}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Cursor" Value="Hand"/>
+            </Style>
 
-        <Style x:Key="Hint" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#FF666666"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,2,0,6"/>
-        </Style>
+            <Style TargetType="CheckBox">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
 
-        <Style x:Key="Card" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#FFD0D7DE"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="3"/>
-            <Setter Property="Padding" Value="10"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-        </Style>
+            <Style TargetType="ComboBox">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
+                <Setter Property="MinHeight" Value="30"/>
+                <Setter Property="Padding" Value="8,3"/>
+            </Style>
+
+            <Style TargetType="TextBox">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
+                <Setter Property="MinHeight" Value="30"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
+
+            <!-- 全局正文:字号由 12 提升到 14(规格确认项 4) -->
+            <Style TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+                <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            </Style>
+
+            <Style TargetType="DataGrid">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
+            </Style>
+
+            <Style TargetType="ListBox">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
+            </Style>
+
+            <!-- ============ 语义化样式 ============ -->
+
+            <!-- 页面/分区标题 -->
+            <Style x:Key="SectionHeader" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Subtitle}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+                <Setter Property="Margin" Value="{StaticResource Margin.SectionTop}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+
+            <!-- 次要说明文字(对应"文字收敛"后的摘要行) -->
+            <Style x:Key="Hint" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Caption}"/>
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+                <Setter Property="Margin" Value="0,2,0,6"/>
+            </Style>
+
+            <!-- 卡片容器 -->
+            <Style x:Key="Card" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource Brush.Surface}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="{StaticResource Radius.Card}"/>
+                <Setter Property="Padding" Value="{StaticResource Padding.Card}"/>
+                <Setter Property="Margin" Value="{StaticResource Margin.CardBottom}"/>
+            </Style>
+
+            <!-- 语义状态卡片(供各处警示/成功/信息提示复用) -->
+            <Style x:Key="CardDanger" TargetType="Border" BasedOn="{StaticResource Card}">
+                <Setter Property="BorderBrush" Value="{StaticResource Brush.Danger}"/>
+                <Setter Property="Background" Value="{StaticResource Brush.DangerSurface}"/>
+            </Style>
+
+            <Style x:Key="CardWarning" TargetType="Border" BasedOn="{StaticResource Card}">
+                <Setter Property="BorderBrush" Value="{StaticResource Brush.Warning}"/>
+                <Setter Property="Background" Value="{StaticResource Brush.WarningSurface}"/>
+            </Style>
+
+            <Style x:Key="CardInfo" TargetType="Border" BasedOn="{StaticResource Card}">
+                <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}"/>
+                <Setter Property="Background" Value="{StaticResource Brush.InfoSurface}"/>
+            </Style>
+
+            <!-- 危险文字(风险提示必须保持醒目 —— 规格红线) -->
+            <Style x:Key="TextDanger" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{StaticResource Brush.Danger}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+
+            <Style x:Key="TextWarning" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Caption}"/>
+                <Setter Property="Foreground" Value="{StaticResource Brush.Warning}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+
+            <!-- 等宽文字(路径、哈希、GUID 等技术信息) -->
+            <Style x:Key="TextMono" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family.Mono}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Mono}"/>
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
