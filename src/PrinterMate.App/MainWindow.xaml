@@ -10,6 +10,100 @@
         FontFamily="{StaticResource Font.Family}"
         Background="{StaticResource Brush.Window}">
     <Window.Resources>
+        <!-- ============ 导航项容器样式(TASK-008) ============ -->
+        <!-- 选中态 = 背景高亮 + 左侧强调条 + 半粗体。分组标题不可交互、不可选中。 -->
+        <Style x:Key="NavItemContainer" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+            <Setter Property="Padding" Value="10,9"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid>
+                            <Border x:Name="Bd"
+                                    Background="Transparent"
+                                    CornerRadius="{StaticResource Radius.Small}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                            </Border>
+                            <Border x:Name="Accent"
+                                    Width="3"
+                                    Margin="0,5"
+                                    HorizontalAlignment="Left"
+                                    Background="{StaticResource Brush.Accent}"
+                                    CornerRadius="{StaticResource Radius.Small}"
+                                    Visibility="Collapsed"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Brush.NavItemHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Brush.NavItemSelected}"/>
+                                <Setter TargetName="Accent" Property="Visibility" Value="Visible"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <!-- 分组标题:禁用交互,防止被鼠标或键盘选中 -->
+                <DataTrigger Binding="{Binding IsGroupHeader}" Value="True">
+                    <Setter Property="IsEnabled" Value="False"/>
+                    <Setter Property="Focusable" Value="False"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ============ 导航项模板:图标 + 标题,或分组标题 ============ -->
+        <DataTemplate x:Key="NavItemTemplate">
+            <Grid>
+                <TextBlock x:Name="GroupText"
+                           Text="{Binding Title}"
+                           Visibility="Collapsed"
+                           FontSize="{StaticResource Font.Size.Caption}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource Brush.NavGroupHeader}"
+                           Margin="2,4,0,0"/>
+
+                <StackPanel x:Name="PageRow" Orientation="Horizontal">
+                    <Path x:Name="Ico"
+                          Width="16" Height="16"
+                          Stretch="Uniform"
+                          VerticalAlignment="Center"
+                          Margin="0,0,10,0"
+                          Fill="{StaticResource Brush.TextSecondary}"
+                          Data="{StaticResource Icon.Book}"/>
+                    <TextBlock x:Name="PageText" Text="{Binding Title}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsGroupHeader}" Value="True">
+                    <Setter TargetName="GroupText" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="PageRow" Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IconKey}" Value="Usb">
+                    <Setter TargetName="Ico" Property="Data" Value="{StaticResource Icon.Usb}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IconKey}" Value="Print">
+                    <Setter TargetName="Ico" Property="Data" Value="{StaticResource Icon.Print}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IconKey}" Value="Queue">
+                    <Setter TargetName="Ico" Property="Data" Value="{StaticResource Icon.Queue}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IconKey}" Value="Driver">
+                    <Setter TargetName="Ico" Property="Data" Value="{StaticResource Icon.Driver}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IconKey}" Value="Settings">
+                    <Setter TargetName="Ico" Property="Data" Value="{StaticResource Icon.Settings}"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
         <DataTemplate DataType="{x:Type vm:TutorialViewModel}">
             <views:TutorialView/>
         </DataTemplate>
@@ -78,17 +172,15 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Background="{StaticResource Brush.NavBackground}" BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,0,1,0">
+                <!-- 单个 ListBox 承载"分组标题 + 页面项":只有一个选择作用域,零索引耦合。
+                     页面区通过 ContentControl 的 DataType 模板匹配解析视图,与集合顺序无关。 -->
                 <ListBox ItemsSource="{Binding Pages}"
                          SelectedItem="{Binding SelectedPage}"
+                         ItemContainerStyle="{StaticResource NavItemContainer}"
+                         ItemTemplate="{StaticResource NavItemTemplate}"
                          Background="Transparent"
                          BorderThickness="0"
-                         Padding="6">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Title}" Padding="6,8" FontSize="{StaticResource Font.Size.Body}"/>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                         Padding="8,10"/>
             </Border>
 
             <ContentControl Grid.Column="1" Content="{Binding SelectedPage.ViewModel}" Margin="12"/>

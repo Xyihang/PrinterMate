@@ -4,18 +4,41 @@ using PrinterMate.App.Services;
 
 namespace PrinterMate.App.ViewModels;
 
-/// <summary>左侧导航项。</summary>
+/// <summary>
+/// 左侧导航项。
+///
+/// 有两种形态:
+///   · 分组标题(IsGroupHeader = true):只做视觉分隔,不可被选中;
+///   · 页面项:承载实际页面 ViewModel。
+/// 两者混在同一个集合里,保证导航只有【一个选择作用域】,
+/// 避免用两个 ListBox 分组时出现"互相清除选中"的绑定回环。
+/// </summary>
 public sealed class NavItem
 {
-    public NavItem(string title, ObservableObject viewModel)
+    private NavItem(string title, ObservableObject? viewModel, string iconKey, bool isGroupHeader)
     {
         Title = title;
         ViewModel = viewModel;
+        IconKey = iconKey;
+        IsGroupHeader = isGroupHeader;
     }
+
+    /// <summary>创建一个页面导航项。</summary>
+    public static NavItem Page(string title, ObservableObject viewModel, string iconKey)
+        => new(title, viewModel, iconKey, isGroupHeader: false);
+
+    /// <summary>创建一个分组标题项(不可选中)。</summary>
+    public static NavItem Group(string title)
+        => new(title, null, string.Empty, isGroupHeader: true);
 
     public string Title { get; }
 
-    public ObservableObject ViewModel { get; }
+    public ObservableObject? ViewModel { get; }
+
+    /// <summary>图标键,由导航项模板通过 DataTrigger 映射到 Resources/Icons.xaml 里的矢量。</summary>
+    public string IconKey { get; }
+
+    public bool IsGroupHeader { get; }
 }
 
 /// <summary>主窗口视图模型:导航、顶部状态条、全局异常落点。</summary>
@@ -45,15 +68,19 @@ public sealed class MainViewModel : ObservableObject
 
         Pages = new ObservableCollection<NavItem>
         {
-            new("新手必读", Tutorial),
-            new("设备发现与连接", DeviceDiscovery),
-            new("驱动管理", DriverManagement),
-            new("打印与测试页", Printing),
-            new("任务队列与状态", Queues),
-            new("设置", Settings),
+            NavItem.Group("核心流程"),
+            NavItem.Page("新手必读", Tutorial, "Book"),
+            NavItem.Page("设备发现与连接", DeviceDiscovery, "Usb"),
+            NavItem.Page("打印与测试页", Printing, "Print"),
+            NavItem.Page("任务队列与状态", Queues, "Queue"),
+            NavItem.Group("配置与帮助"),
+            NavItem.Page("驱动管理", DriverManagement, "Driver"),
+            NavItem.Page("设置", Settings, "Settings"),
         };
 
-        _selectedPage = Pages[0];
+        // 关键:初始选中项必须是【页面项】而不是分组标题。
+        // 分组标题不可选中,若取 Pages[0] 会得到一个无法显示页面的选中态。
+        _selectedPage = Pages.First(p => !p.IsGroupHeader);
         StatusHub.Updated += OnStatusUpdated;
 
         var last = StatusHub.Last;
@@ -90,6 +117,13 @@ public sealed class MainViewModel : ObservableObject
         get => _selectedPage;
         set
         {
+            // 安全网:分组标题不可被选中。
+            // 即使某个输入设备仍让它变成选中项,这里直接忽略,避免页面区变空白。
+            if (value is { IsGroupHeader: true })
+            {
+                return;
+            }
+
             var previous = _selectedPage;
             if (!SetProperty(ref _selectedPage, value))
             {
