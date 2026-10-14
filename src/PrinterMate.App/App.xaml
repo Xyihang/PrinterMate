@@ -101,6 +101,25 @@
                 <Setter Property="TextWrapping" Value="Wrap"/>
             </Style>
 
+            <!-- ============ 统一空态(TASK-016) ============ -->
+            <!-- 用途:列表或区域为空时的占位提示。统一字号/颜色/对齐/留白,
+                 避免各页各写一套"看起来像提示又像错误"的散装空态。 -->
+
+            <Style x:Key="EmptyState" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
+                <Setter Property="FontSize" Value="{StaticResource Font.Size.Caption}"/>
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+                <Setter Property="TextAlignment" Value="Center"/>
+                <Setter Property="Padding" Value="14,12"/>
+            </Style>
+
+            <!-- 空态容器:比普通卡片更轻(浅底 + 弱边框),视觉上"这里还没有内容" -->
+            <Style x:Key="EmptyStateCard" TargetType="Border" BasedOn="{StaticResource Card}">
+                <Setter Property="Background" Value="{StaticResource Brush.SurfaceSunken}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Brush.Divider}"/>
+            </Style>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

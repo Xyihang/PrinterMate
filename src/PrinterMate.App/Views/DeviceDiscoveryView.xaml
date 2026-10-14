@@ -80,9 +80,11 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <TextBlock Style="{StaticResource Hint}"
-                       Text="尚未检测到 USB 打印机。请确认打印机已开机并通过 USB 线连接本机,然后点击「扫描 USB 打印机」。"
-                       Visibility="{Binding HasNoUsbDevices, Converter={StaticResource BoolToVisibility}}"/>
+            <Border Style="{StaticResource EmptyStateCard}"
+                    Visibility="{Binding HasNoUsbDevices, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource EmptyState}"
+                           Text="尚未检测到 USB 打印机。请确认打印机已开机并通过 USB 线连接本机,然后点击上方「扫描 USB 打印机」。"/>
+            </Border>
 
             <!-- 「状态」列的四种含义:紧贴状态列,默认收起,需要时展开 -->
             <Expander IsExpanded="False">
@@ -155,9 +157,11 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <TextBlock Style="{StaticResource Hint}"
-                       Text="尚未发现局域网打印机。可点击「扫描局域网」自动发现,或在上面输入 IP/主机名手动添加。"
-                       Visibility="{Binding HasNoNetworkDevices, Converter={StaticResource BoolToVisibility}}"/>
+            <Border Style="{StaticResource EmptyStateCard}"
+                    Visibility="{Binding HasNoNetworkDevices, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource EmptyState}"
+                           Text="尚未发现局域网打印机。可点击「扫描局域网」自动发现,或在上面输入 IP/主机名手动添加。"/>
+            </Border>
 
             <Border Style="{StaticResource Card}" Visibility="{Binding HasNetworkDevices, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel>
@@ -193,9 +197,11 @@
                     <DataGridTextColumn Header="耗时" Binding="{Binding DurationText}" Width="70"/>
                 </DataGrid.Columns>
             </DataGrid>
-            <TextBlock Style="{StaticResource Hint}"
-                       Text="尚未执行安装。连接设备后,这里会实时显示每一步的命令与返回码。"
-                       Visibility="{Binding HasNoSteps, Converter={StaticResource BoolToVisibility}}"/>
+            <Border Style="{StaticResource EmptyStateCard}"
+                    Visibility="{Binding HasNoSteps, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource EmptyState}"
+                           Text="尚未执行安装。连接设备后,这里会实时显示每一步的命令与返回码。"/>
+            </Border>
 
         </StackPanel>
     </ScrollViewer>
