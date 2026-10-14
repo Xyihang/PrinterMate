@@ -35,7 +35,7 @@
             <Border Grid.Row="0" Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="打印机健康状态" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding HealthText}" FontSize="15" FontWeight="Bold" Margin="0,2,0,0"
+                    <TextBlock Text="{Binding HealthText}" FontSize="{StaticResource Font.Size.Subtitle}" FontWeight="Bold" Margin="0,2,0,0"
                                Foreground="{Binding HealthLevel, Converter={StaticResource StatusLevelBrush}}"/>
                     <TextBlock Text="{Binding HealthAdvice}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                 </StackPanel>

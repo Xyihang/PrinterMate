@@ -68,6 +68,11 @@
     <Color x:Key="Color.ScrollThumbHover">#FFA0A0A0</Color>
     <Color x:Key="Color.ScrollTrack">#00FFFFFF</Color>
 
+    <!-- 顶部信息条(深色) -->
+    <Color x:Key="Color.HeaderBar">#FF23303D</Color>
+    <Color x:Key="Color.HeaderText">#FFE8EDF2</Color>
+    <Color x:Key="Color.HeaderTextAccent">#FFFFD18A</Color>
+
     <!-- 导航 -->
     <Color x:Key="Color.NavBackground">#FFF7F7F7</Color>
     <Color x:Key="Color.NavItemHover">#FFEDEDED</Color>
@@ -124,6 +129,10 @@
     <SolidColorBrush x:Key="Brush.ScrollThumb" Color="{StaticResource Color.ScrollThumb}"/>
     <SolidColorBrush x:Key="Brush.ScrollThumbHover" Color="{StaticResource Color.ScrollThumbHover}"/>
     <SolidColorBrush x:Key="Brush.ScrollTrack" Color="{StaticResource Color.ScrollTrack}"/>
+
+    <SolidColorBrush x:Key="Brush.HeaderBar" Color="{StaticResource Color.HeaderBar}"/>
+    <SolidColorBrush x:Key="Brush.HeaderText" Color="{StaticResource Color.HeaderText}"/>
+    <SolidColorBrush x:Key="Brush.HeaderTextAccent" Color="{StaticResource Color.HeaderTextAccent}"/>
 
     <SolidColorBrush x:Key="Brush.NavBackground" Color="{StaticResource Color.NavBackground}"/>
     <SolidColorBrush x:Key="Brush.NavItemHover" Color="{StaticResource Color.NavItemHover}"/>

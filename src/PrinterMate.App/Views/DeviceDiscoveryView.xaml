@@ -20,11 +20,11 @@
                   PanningMode="VerticalOnly">
         <StackPanel>
 
-            <Border Style="{StaticResource Card}" Background="#FFF6F9FF" BorderBrush="#FF2E6FB7" BorderThickness="1">
+            <Border Style="{StaticResource Card}" Background="{StaticResource Brush.InfoSurface}" BorderBrush="{StaticResource Brush.Accent}" BorderThickness="1">
                 <StackPanel>
                     <TextBlock TextWrapping="Wrap" FontWeight="Bold"
                                Text="第一次用?左边「新手必读」页有完整教程(USB 三步连接、驱动怎么来、遇到问题怎么办)。"/>
-                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#FF666666"
+                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="下面是实际操作区:点「扫描 USB 打印机」→ 在列表里点「一键连接」即可。"/>
                 </StackPanel>
             </Border>
@@ -77,9 +77,9 @@
                     <TextBlock FontWeight="Bold" Text="驱动决策详情(选中 USB 设备)"/>
                     <TextBlock Text="{Binding SelectedUsbDevice.DeviceName, TargetNullValue=请在列表中选中一台设备}" Margin="0,4,0,0"/>
                     <TextBlock Text="{Binding SelectedUsbDevice.DecisionText}" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                    <TextBlock Text="{Binding SelectedUsbDevice.SuggestionText}" TextWrapping="Wrap" Foreground="#FF8A5A00" Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding SelectedUsbDevice.SuggestionText}" TextWrapping="Wrap" Foreground="{StaticResource Brush.Warning}" Margin="0,2,0,0"/>
                     <TextBlock Text="候选驱动:" FontWeight="Bold" Margin="0,6,0,0"/>
-                    <TextBlock Text="{Binding SelectedUsbDevice.CandidateText}" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedUsbDevice.CandidateText}" TextWrapping="Wrap" FontFamily="Consolas" FontSize="{StaticResource Font.Size.Caption}"/>
                 </StackPanel>
             </Border>
 
@@ -125,9 +125,9 @@
                 <StackPanel>
                     <TextBlock FontWeight="Bold" Text="驱动决策详情(选中局域网设备)"/>
                     <TextBlock Text="{Binding SelectedNetworkDevice.Name, TargetNullValue=请在列表中选中一台设备}" Margin="0,4,0,0"/>
-                    <TextBlock Text="{Binding SelectedNetworkDevice.SuggestionText}" TextWrapping="Wrap" Foreground="#FF8A5A00" Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding SelectedNetworkDevice.SuggestionText}" TextWrapping="Wrap" Foreground="{StaticResource Brush.Warning}" Margin="0,2,0,0"/>
                     <TextBlock Text="候选驱动:" FontWeight="Bold" Margin="0,6,0,0"/>
-                    <TextBlock Text="{Binding SelectedNetworkDevice.CandidateText}" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedNetworkDevice.CandidateText}" TextWrapping="Wrap" FontFamily="Consolas" FontSize="{StaticResource Font.Size.Caption}"/>
                 </StackPanel>
             </Border>
 

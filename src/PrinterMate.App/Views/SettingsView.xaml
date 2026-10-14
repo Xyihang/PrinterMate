@@ -26,7 +26,7 @@
                                Foreground="{Binding WppEnabled, Converter={StaticResource InverseBoolToBrush}}"/>
                     <TextBlock Text="{Binding WppSource, StringFormat=检测来源:{0}}" Margin="0,4,0,0"/>
                     <TextBlock Text="{Binding WppDetail}" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#FF666666"
+                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="WPP 启用后,系统只允许内置类驱动,第三方打印驱动安装会被拒绝。程序会自动降级到 L0 免驱通道。"/>
                 </StackPanel>
             </Border>
@@ -38,7 +38,7 @@
                     <WrapPanel Margin="0,6,0,0">
                         <Button Content="打开日志目录" Command="{Binding OpenLogFolderCommand}"/>
                     </WrapPanel>
-                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#FF666666"
+                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="所有安装、测试页与驱动校验操作都会按天写入 audit-YYYYMMDD.jsonl,一行一条 JSON,便于审计与排障。"/>
                 </StackPanel>
             </Border>
@@ -47,7 +47,7 @@
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="{Binding WhitelistError}" TextWrapping="Wrap"
-                               Foreground="#FFC02828"
+                               Foreground="{StaticResource Brush.Danger}"
                                Visibility="{Binding HasWhitelistError, Converter={StaticResource BoolToVisibility}}"/>
 
                     <TextBlock Text="微软官方更新服务域名:" FontWeight="Bold"/>
@@ -68,7 +68,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#FF666666"
+                    <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="白名单仅用于后续版本的在线驱动补齐(L2),本版本不会发起任何驱动下载请求。"/>
                 </StackPanel>
             </Border>

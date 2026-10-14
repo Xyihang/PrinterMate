@@ -7,8 +7,8 @@
         Height="780" Width="1220"
         MinHeight="560" MinWidth="960"
         WindowStartupLocation="CenterScreen"
-        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
-        Background="#FFF5F6F8">
+        FontFamily="{StaticResource Font.Family}"
+        Background="{StaticResource Brush.Window}">
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:TutorialViewModel}">
             <views:TutorialView/>
@@ -37,7 +37,7 @@
         </Grid.RowDefinitions>
 
         <!-- 顶部状态条:左侧当前操作,右侧结果与建议 -->
-        <Border Grid.Row="0" Background="#FF23303D" Padding="12,8">
+        <Border Grid.Row="0" Background="{StaticResource Brush.HeaderBar}" Padding="12,8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="260"/>
@@ -64,7 +64,7 @@
 
                 <TextBlock Grid.Row="1" Grid.Column="1"
                            Text="{Binding SuggestionText}"
-                           Foreground="#FFFFD18A"
+                           Foreground="{StaticResource Brush.HeaderTextAccent}"
                            TextWrapping="Wrap"
                            Margin="0,4,0,0"
                            Visibility="{Binding HasSuggestion, Converter={StaticResource BoolToVisibility}}"/>
@@ -77,7 +77,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="#FFE9EDF2" BorderBrush="#FFD0D7DE" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="{StaticResource Brush.NavBackground}" BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,0,1,0">
                 <ListBox ItemsSource="{Binding Pages}"
                          SelectedItem="{Binding SelectedPage}"
                          Background="Transparent"
@@ -85,7 +85,7 @@
                          Padding="6">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Title}" Padding="6,8" FontSize="13"/>
+                            <TextBlock Text="{Binding Title}" Padding="6,8" FontSize="{StaticResource Font.Size.Body}"/>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

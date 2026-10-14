@@ -14,7 +14,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock x:Name="TitleText" Grid.Row="0" FontSize="15" FontWeight="Bold" TextWrapping="Wrap" Margin="0,0,0,8"/>
+        <TextBlock x:Name="TitleText" Grid.Row="0" FontSize="{StaticResource Font.Size.Subtitle}" FontWeight="Bold" TextWrapping="Wrap" Margin="0,0,0,8"/>
 
         <TextBox x:Name="BodyText" Grid.Row="1"
                  IsReadOnly="True"
@@ -23,11 +23,11 @@
                  AcceptsReturn="True"
                  VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Disabled"
-                 Background="#FFF8F8F8"
-                 BorderBrush="#FFCCCCCC"
+                 Background="{StaticResource Brush.SurfaceSunken}"
+                 BorderBrush="{StaticResource Brush.ControlBorder}"
                  Padding="8"
-                 FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
-                 FontSize="13"/>
+                 FontFamily="{StaticResource Font.Family}"
+                 FontSize="{StaticResource Font.Size.Body}"/>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button x:Name="CancelButton" Content="取消" IsCancel="True" MinWidth="96" Margin="0,0,8,0" Click="OnCancelClick"/>

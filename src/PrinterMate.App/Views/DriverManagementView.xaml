@@ -42,9 +42,9 @@
         <StackPanel>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="第三方驱动站检索(风险自担)"/>
-            <Border Style="{StaticResource Card}" BorderBrush="#FFB45309" BorderThickness="1">
+            <Border Style="{StaticResource Card}" BorderBrush="{StaticResource Brush.Warning}" BorderThickness="1">
                 <StackPanel>
-                    <TextBlock Text="{Binding SiteHint}" TextWrapping="Wrap" Foreground="#FFB45309"/>
+                    <TextBlock Text="{Binding SiteHint}" TextWrapping="Wrap" Foreground="{StaticResource Brush.Warning}"/>
                     <WrapPanel Margin="0,8,0,0">
                         <TextBlock Text="站点:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <ComboBox Width="260" ItemsSource="{Binding DriverSites}"
@@ -56,7 +56,7 @@
                         <Button Content="在浏览器中打开搜索页" Padding="12,4"
                                 Command="{Binding OpenSiteSearchCommand}"/>
                     </WrapPanel>
-                    <TextBlock Margin="0,6,0,0" Foreground="#FF666666" TextWrapping="Wrap"
+                    <TextBlock Margin="0,6,0,0" Foreground="{StaticResource Brush.TextSecondary}" TextWrapping="Wrap"
                                Text="提示:驱动天空(drvsky)只接受 POST 检索,程序会在本机生成一个表单页并交由浏览器提交;程序自身不会向该站发起请求。"/>
                 </StackPanel>
             </Border>
@@ -64,7 +64,7 @@
             <TextBlock Style="{StaticResource SectionHeader}" Text="在线补齐(L2 · 仅白名单官方源)"/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="{Binding OnlineHint}" TextWrapping="Wrap" Foreground="#FF666666"/>
+                    <TextBlock Text="{Binding OnlineHint}" TextWrapping="Wrap" Foreground="{StaticResource Brush.TextSecondary}"/>
 
                     <WrapPanel Margin="0,8,0,0">
                         <TextBlock Text="品牌:" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -98,8 +98,8 @@
                     </ListBox>
 
                     <StackPanel Margin="0,8,0,0">
-                        <TextBlock Text="{Binding LicenseBrandText}" TextWrapping="Wrap" Foreground="#FF666666"/>
-                        <TextBlock Text="{Binding DownloadFolderHint}" TextWrapping="Wrap" Foreground="#FF666666" Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding LicenseBrandText}" TextWrapping="Wrap" Foreground="{StaticResource Brush.TextSecondary}"/>
+                        <TextBlock Text="{Binding DownloadFolderHint}" TextWrapping="Wrap" Foreground="{StaticResource Brush.TextSecondary}" Margin="0,2,0,0"/>
                         <WrapPanel Margin="0,6,0,0">
                             <Button Content="查看厂商官方页 / 许可条款" Padding="10,3" Margin="0,0,10,0"
                                     Command="{Binding OpenVendorPageCommand}"/>
@@ -107,7 +107,7 @@
                                       IsChecked="{Binding LicenseAccepted}"
                                       Content="我已阅读并接受该厂商的许可条款(勾选后才能下载)"/>
                         </WrapPanel>
-                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Foreground="#FFB45309"
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{StaticResource Brush.Warning}"
                                    Text="说明:厂商驱动的许可条款是给最终用户的,程序不会替你接受。勾选动作与时间会写入审计日志,作为凭据。"/>
                     </StackPanel>
 
@@ -125,7 +125,7 @@
                                 Command="{Binding ImportFolderCommand}"
                                 ToolTip="把文件夹里所有驱动包一次性解包、验证签名并入库"/>
                     </WrapPanel>
-                    <TextBlock Margin="0,4,0,0" Foreground="#FF666666" TextWrapping="Wrap"
+                    <TextBlock Margin="0,4,0,0" Foreground="{StaticResource Brush.TextSecondary}" TextWrapping="Wrap"
                                Text="如果你是从浏览器手动下载的驱动包,点「选择本地驱动包…」指定它,再走 ②③ 即可(程序会接手校验、解包与入库)。"/>
 
                     <ProgressBar Height="6" Margin="0,10,0,0" IsIndeterminate="True"
@@ -141,7 +141,7 @@
 
                     <TextBlock Margin="0,8,0,0" Text="{Binding OnlineStageText}" TextWrapping="Wrap"/>
                     <TextBlock Margin="0,4,0,0" Text="{Binding OnlineResultText}" TextWrapping="Wrap"
-                               Foreground="#FF1B7F3B"/>
+                               Foreground="{StaticResource Brush.Success}"/>
                 </StackPanel>
             </Border>
 
@@ -161,12 +161,12 @@
             </Border>
 
             <Border Style="{StaticResource Card}"
-                    BorderBrush="#FFC02828"
+                    BorderBrush="{StaticResource Brush.Danger}"
                     BorderThickness="1"
                     Visibility="{Binding HasMissingPackages, Converter={StaticResource BoolToVisibility}}">
                 <Expander IsExpanded="False">
                     <Expander.Header>
-                        <TextBlock Text="{Binding MissingHeader}" FontWeight="Bold" Foreground="#FFC02828" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding MissingHeader}" FontWeight="Bold" Foreground="{StaticResource Brush.Danger}" TextWrapping="Wrap"/>
                     </Expander.Header>
                     <StackPanel>
                     <ItemsControl ItemsSource="{Binding MissingPackages}" Margin="0,4,0,0">
@@ -187,7 +187,7 @@
                         <TextBlock Text="{Binding PolicySummary, StringFormat=当前策略:{0}}" TextWrapping="Wrap" FontWeight="Bold"/>
                     </Expander.Header>
                     <StackPanel>
-                    <TextBlock Text="{Binding PolicyHint}" TextWrapping="Wrap" Foreground="#FF666666" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding PolicyHint}" TextWrapping="Wrap" Foreground="{StaticResource Brush.TextSecondary}" Margin="0,4,0,0"/>
 
                     <CheckBox Margin="0,8,0,0"
                               Content="允许全部品牌使用内置驱动(仅本机个人使用)"
@@ -238,7 +238,7 @@
                                     <TextBlock Text="{Binding RedistributableText}" Width="80"/>
                                     <TextBlock Text="{Binding AvailableText}" Width="70"
                                                Foreground="{Binding IsAvailable, Converter={StaticResource BoolToBrush}}"/>
-                                    <TextBlock Text="{Binding Reason}" Foreground="#FF666666" MaxWidth="420"
+                                    <TextBlock Text="{Binding Reason}" Foreground="{StaticResource Brush.TextSecondary}" MaxWidth="420"
                                                TextTrimming="CharacterEllipsis" ToolTip="{Binding Reason}"/>
                                 </StackPanel>
                             </DataTemplate>
@@ -274,9 +274,9 @@
                             <TextBlock Text="{Binding PdlText}" Width="100"/>
                             <TextBlock Text="{Binding SourceText}" Width="110"/>
                             <TextBlock Text="{Binding ConfidenceText, StringFormat=置信度 {0}}" Width="90"/>
-                            <TextBlock Text="可用" Foreground="#FF1B7F3B"
+                            <TextBlock Text="可用" Foreground="{StaticResource Brush.Success}"
                                        Visibility="{Binding Installable, Converter={StaticResource BoolToVisibility}}"/>
-                            <TextBlock Text="{Binding BlockReason}" Foreground="#FFC02828"
+                            <TextBlock Text="{Binding BlockReason}" Foreground="{StaticResource Brush.Danger}"
                                        Visibility="{Binding Installable, Converter={StaticResource InverseBoolToVisibility}}"/>
                         </StackPanel>
                     </DataTemplate>
