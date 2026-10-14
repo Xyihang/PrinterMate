@@ -4,29 +4,44 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="默认打印机"/>
+            <!-- ══ 打印机 ══ -->
+            <TextBlock Style="{StaticResource SectionHeader}" Margin="0,0,0,8" Text="默认打印机"/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="{Binding DefaultPrinter, StringFormat=系统当前默认打印机:{0}}" FontWeight="Bold" TextWrapping="Wrap"/>
-                    <WrapPanel Margin="0,6,0,0">
+                    <TextBlock Text="{Binding DefaultPrinter, StringFormat=系统当前默认打印机:{0}}"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"/>
+                    <WrapPanel Margin="0,8,0,0">
                         <TextBlock Text="选择打印机:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <ComboBox Width="320" ItemsSource="{Binding Printers}" SelectedItem="{Binding SelectedPrinter}"
-                                  DisplayMemberPath="Name" Margin="0,0,10,0"/>
-                        <Button Content="设为默认打印机" Command="{Binding SetDefaultPrinterCommand}"/>
+                        <ComboBox Width="320"
+                                  ItemsSource="{Binding Printers}"
+                                  SelectedItem="{Binding SelectedPrinter}"
+                                  DisplayMemberPath="Name"
+                                  Margin="0,0,10,0"/>
+                        <Button Style="{StaticResource ButtonPrimary}"
+                                Content="设为默认打印机"
+                                Command="{Binding SetDefaultPrinterCommand}"/>
                         <Button Content="打开系统打印机管理" Command="{Binding OpenPrinterSettingsCommand}"/>
                         <Button Content="刷新" Command="{Binding RefreshCommand}"/>
                     </WrapPanel>
                 </StackPanel>
             </Border>
 
+            <!-- ══ 安全与合规 ══ -->
             <TextBlock Style="{StaticResource SectionHeader}" Text="Windows Protected Print Mode(WPP)"/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="{Binding WppStateText}" FontWeight="Bold" TextWrapping="Wrap"
+                    <TextBlock Text="{Binding WppStateText}"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
                                Foreground="{Binding WppEnabled, Converter={StaticResource InverseBoolToBrush}}"/>
                     <TextBlock Text="{Binding WppSource, StringFormat=检测来源:{0}}" Margin="0,4,0,0"/>
                     <TextBlock Text="{Binding WppDetail}" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{StaticResource Brush.TextSecondary}"
+
+                    <!-- 安全相关说明:按规格红线保持可见,不折叠 -->
+                    <TextBlock TextWrapping="Wrap"
+                               Margin="0,6,0,0"
+                               Foreground="{StaticResource Brush.TextSecondary}"
                                Text="WPP 启用后,系统只允许内置类驱动,第三方打印驱动安装会被拒绝。程序会自动降级到 L0 免驱通道。"/>
                 </StackPanel>
             </Border>
@@ -35,59 +50,87 @@
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="{Binding AuditDirectory, StringFormat=日志目录:{0}}" TextWrapping="Wrap"/>
-                    <WrapPanel Margin="0,6,0,0">
+                    <WrapPanel Margin="0,8,0,0">
                         <Button Content="打开日志目录" Command="{Binding OpenLogFolderCommand}"/>
                     </WrapPanel>
-                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{StaticResource Brush.TextSecondary}"
-                               Text="所有安装、测试页与驱动校验操作都会按天写入 audit-YYYYMMDD.jsonl,一行一条 JSON,便于审计与排障。"/>
+                    <Expander IsExpanded="False">
+                        <Expander.Header>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0" Text="日志里记了什么?点开查看"/>
+                        </Expander.Header>
+                        <TextBlock TextWrapping="Wrap"
+                                   Foreground="{StaticResource Brush.TextSecondary}"
+                                   Text="所有安装、测试页与驱动校验操作都会按天写入 audit-YYYYMMDD.jsonl,一行一条 JSON,便于审计与排障。"/>
+                    </Expander>
                 </StackPanel>
             </Border>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="下载源白名单(只读)"/>
-            <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="{Binding WhitelistError}" TextWrapping="Wrap"
-                               Foreground="{StaticResource Brush.Danger}"
-                               Visibility="{Binding HasWhitelistError, Converter={StaticResource BoolToVisibility}}"/>
+            <!-- ══ 低频只读:白名单(整段折叠)══ -->
+            <Expander IsExpanded="False" Margin="0,14,0,0">
+                <Expander.Header>
+                    <TextBlock Style="{StaticResource SectionHeader}"
+                               Margin="0"
+                               Text="下载源白名单(只读)—— 点开查看当前生效的域名"/>
+                </Expander.Header>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding WhitelistError}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource Brush.Danger}"
+                                   Visibility="{Binding HasWhitelistError, Converter={StaticResource BoolToVisibility}}"/>
 
-                    <TextBlock Text="微软官方更新服务域名:" FontWeight="Bold"/>
-                    <ItemsControl ItemsSource="{Binding MicrosoftDomains}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" Margin="12,1,0,0"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        <TextBlock Text="微软官方更新服务域名:" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding MicrosoftDomains}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Margin="12,1,0,0"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
-                    <TextBlock Text="厂商官方域名:" FontWeight="Bold" Margin="0,6,0,0"/>
-                    <ItemsControl ItemsSource="{Binding VendorDomains}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding DisplayText}" Margin="12,1,0,0"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        <TextBlock Text="厂商官方域名:" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                        <ItemsControl ItemsSource="{Binding VendorDomains}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayText}" Margin="12,1,0,0"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
-                    <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{StaticResource Brush.TextSecondary}"
-                               Text="白名单仅用于后续版本的在线驱动补齐(L2),本版本不会发起任何驱动下载请求。"/>
-                </StackPanel>
-            </Border>
+                        <!-- 更正过时文案:此前写的是"本版本不会发起任何驱动下载请求",
+                             但 L2 在线补齐已经实现并确实会发起下载;这里改为准确描述实际行为,
+                             并强调校验未被放宽(不是弱化安全说明,而是消除不实陈述)。 -->
+                        <TextBlock TextWrapping="Wrap"
+                                   Margin="0,8,0,0"
+                                   Foreground="{StaticResource Brush.TextSecondary}"
+                                   Text="白名单只对「在线补齐(L2)」生效:只有列在其中的域名才允许被访问,且下载后会强制校验 HTTPS 证书、官方公布的 SHA256 与 Authenticode 数字签名,任一不通过都会拒绝并写入审计日志。其它功能不会访问网络。"/>
+                    </StackPanel>
+                </Border>
+            </Expander>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="环境信息(只读)"/>
-            <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="{Binding SystemVersion, StringFormat=系统版本:{0}}"/>
-                    <TextBlock Text="{Binding SystemBuild, StringFormat=系统内部版本:{0}}"/>
-                    <TextBlock Text="{Binding ArchitectureText, StringFormat=架构:{0}}"/>
-                    <TextBlock Text="{Binding RuntimeText, StringFormat=运行库:{0}}"/>
+            <!-- ══ 低频只读:环境信息(整段折叠)══ -->
+            <Expander IsExpanded="False" Margin="0,14,0,0">
+                <Expander.Header>
+                    <TextBlock Style="{StaticResource SectionHeader}"
+                               Margin="0"
+                               Text="环境信息(只读)—— 点开查看系统与运行库版本"/>
+                </Expander.Header>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SystemVersion, StringFormat=系统版本:{0}}"/>
+                        <TextBlock Text="{Binding SystemBuild, StringFormat=系统内部版本:{0}}"/>
+                        <TextBlock Text="{Binding ArchitectureText, StringFormat=架构:{0}}"/>
+                        <TextBlock Text="{Binding RuntimeText, StringFormat=运行库:{0}}"/>
 
-                    <TextBlock Text="{Binding PowerShellText, StringFormat=PowerShell:{0}}" TextWrapping="Wrap"
-                               Foreground="{Binding PowerShellAvailable, Converter={StaticResource BoolToBrush}}"/>
-                    <TextBlock Text="{Binding HelperText, StringFormat=提权辅助进程:{0}}" TextWrapping="Wrap"
-                               Foreground="{Binding HelperAvailable, Converter={StaticResource BoolToBrush}}"/>
-                    <TextBlock Text="{Binding ElevationText}" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                </StackPanel>
-            </Border>
+                        <TextBlock Text="{Binding PowerShellText, StringFormat=PowerShell:{0}}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{Binding PowerShellAvailable, Converter={StaticResource BoolToBrush}}"/>
+                        <TextBlock Text="{Binding HelperText, StringFormat=提权辅助进程:{0}}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{Binding HelperAvailable, Converter={StaticResource BoolToBrush}}"/>
+                        <TextBlock Text="{Binding ElevationText}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Expander>
 
         </StackPanel>
     </ScrollViewer>
