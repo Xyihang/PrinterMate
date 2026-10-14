@@ -33,11 +33,25 @@
 | G1 | `dotnet build PrinterMate.slnx` | **0 错误** |
 | G2 | `dotnet test tests/PrinterMate.UnitTests` | **395 个全过**（0 失败，1 跳过） |
 | G3 | 启动程序，**逐页实际点开 6 个页面** | 无 XAML 加载异常、无空白页 |
+| **G3+** | 逐页抓取 UIA 文本树，检测 **ToString() 泄漏**（正则 `\w+\.\w+ \{` 或 `\{ \w+ = `） | **0 处泄漏** |
+| **G3++** | 关键页截图**目视核对**（涉控件模板替换的改动必做） | 文字/控件显示正确 |
 | G4 | 硬编码颜色计数 `grep '#[0-9A-Fa-f]{6}'` | **单调下降**，Phase 5 结束时 = 0 |
 | G5 | 构建后启动 EXE，进程响应正常 | 界面可交互 |
 
 **G3 的说明**：编译通过 ≠ 页面能加载。XAML 错误只在页面被实例化时才抛出，
 所以必须**实际点击导航**逐页验证（本会话已踩过此坑，故列为强制项）。
+
+**G3+ / G3++ 的由来（实测教训）**：TASK-005 替换 ComboBox 模板后 `DisplayMemberPath` 失效，
+下拉框显示了 `QueuePrinterInfo { Name = HP Deskjet 2520 : ... }`。
+**G3 只检查"进程存活"，完全没拦住这个回归 —— 是截图看出来的。**
+因此把"内容级检查"提升为强制门禁：
+
+- **G3+**：用 UIA 抓页面文本树，正则匹配 `\w+\.\w+ \{`（类型名 + 属性列表）即判为 ToString() 泄漏；
+- **G3++**：任何涉及**控件模板替换**的改动，必须截图目视核对。
+
+**技术要点（已踩坑，务必遵守）**：`TemplateBinding` 对**只读依赖属性**不生效。
+`ComboBox.SelectionBoxItem` / `SelectionBoxItemTemplate` 均为只读 DP，
+必须改用 `{Binding X, RelativeSource={RelativeSource TemplatedParent}}` 的完整 Binding。
 
 ---
 
