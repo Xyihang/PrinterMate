@@ -24,6 +24,9 @@ public sealed record OnlinePackageResult(
     IReadOnlyList<InfChoice> InfCandidates,
     string ChoiceReason);
 
+/// <summary>批量操作(批量下载 / 批量导入)的单项结果。</summary>
+public sealed record BatchItemResult(string Name, bool Success, string Message);
+
 /// <summary>
 /// 在线补齐(L2)编排器。把「检索 → 下载 → 三重校验 → 解包 → 验证 → 入库」串成一条可解释的链路。
 ///
@@ -260,6 +263,109 @@ public sealed class OnlineDriverInstaller
         return result.Entry is null
             ? OperationResult<DriverCatalogEntry>.Fail(result.Message)
             : OperationResult<DriverCatalogEntry>.Ok(result.Entry, result.Message + suffix);
+    }
+
+    /// <summary>
+    /// 批量导入:把一个文件夹里的驱动包逐个「解包 → 验证签名 → 入库」。
+    /// 品牌从 INF 里解析出的驱动名推断;推断不出来的会明确报出来,让你用「选择本地驱动包…」手动指定。
+    /// </summary>
+    public IReadOnlyList<BatchItemResult> ImportFolder(string folder, IProgress<string>? progress = null)
+    {
+        if (!Directory.Exists(folder))
+        {
+            return new[] { new BatchItemResult(folder, false, "文件夹不存在。") };
+        }
+
+        var extensions = new[] { ".cab", ".zip", ".exe", ".msi", ".inf" };
+        var files = Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
+            .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (files.Count == 0)
+        {
+            return new[] { new BatchItemResult(folder, false, "文件夹里没有可识别的驱动包(.cab / .zip / .exe / .msi / .inf)。") };
+        }
+
+        var results = new List<BatchItemResult>();
+
+        foreach (var file in files)
+        {
+            var name = Path.GetFileName(file);
+            progress?.Report($"处理 {name} …");
+
+            try
+            {
+                var package = ExtractAndVerify(file, name);
+                if (!package.IsSuccess || package.Value is null)
+                {
+                    results.Add(new BatchItemResult(name, false, package.Message));
+                    continue;
+                }
+
+                // 驱动名必须与 INF 逐字一致:取打分最高的那个 INF 解析出的名字
+                var driverName = package.Value.InfCandidates
+                    .SelectMany(c => c.DriverNames)
+                    .FirstOrDefault();
+
+                if (string.IsNullOrWhiteSpace(driverName))
+                {
+                    results.Add(new BatchItemResult(name, false, "包内 INF 解析不出驱动名,请用「选择本地驱动包…」手动指定。"));
+                    continue;
+                }
+
+                var brand = CatalogMatcher.ResolveBrands(null, driverName, _library).FirstOrDefault()
+                            ?? CatalogMatcher.ResolveBrands(null, name, _library).FirstOrDefault();
+
+                if (string.IsNullOrWhiteSpace(brand))
+                {
+                    results.Add(new BatchItemResult(
+                        name,
+                        false,
+                        $"无法从「{driverName}」推断品牌,请用「选择本地驱动包…」手动指定。"));
+                    continue;
+                }
+
+                var import = ImportToLibrary(
+                    package.Value,
+                    brand,
+                    $"{brand} 在线补齐",
+                    InferPdl(driverName),
+                    driverName);
+
+                results.Add(import.IsSuccess
+                    ? new BatchItemResult(name, true, $"{brand} / {driverName}")
+                    : new BatchItemResult(name, false, import.Message));
+            }
+            catch (Exception ex)
+            {
+                results.Add(new BatchItemResult(name, false, ex.Message));
+            }
+        }
+
+        _audit.Write(
+            "批量导入-完成",
+            folder,
+            "完成",
+            $"共 {files.Count} 个文件,成功 {results.Count(r => r.Success)} 个");
+
+        return results;
+    }
+
+    /// <summary>
+    /// 记录使用者对某厂商许可条款的显式确认。
+    ///
+    /// 为什么要留痕:厂商驱动的许可条款是给最终用户的,程序不能静默替用户接受。
+    /// 把"谁在什么时候接受了哪个厂商的条款"记进审计日志,既是对用户的交代,也是合规上的凭据。
+    /// </summary>
+    public void RecordLicenseAcceptance(string brand, string sourceUrl, string licensePageUrl)
+    {
+        _audit.Write(
+            "许可确认",
+            brand,
+            "已接受",
+            $"使用者确认已阅读并接受「{brand}」驱动许可条款;许可页={licensePageUrl};下载源={sourceUrl}",
+            sourceUrl);
     }
 
     /// <summary>

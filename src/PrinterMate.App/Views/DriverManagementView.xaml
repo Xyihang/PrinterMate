@@ -97,6 +97,21 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
+                    <StackPanel Margin="0,8,0,0">
+                        <TextBlock Text="{Binding LicenseBrandText}" TextWrapping="Wrap" Foreground="#FF666666"/>
+                        <TextBlock Text="{Binding DownloadFolderHint}" TextWrapping="Wrap" Foreground="#FF666666" Margin="0,2,0,0"/>
+                        <WrapPanel Margin="0,6,0,0">
+                            <Button Content="查看厂商官方页 / 许可条款" Padding="10,3" Margin="0,0,10,0"
+                                    Command="{Binding OpenVendorPageCommand}"/>
+                            <CheckBox VerticalAlignment="Center"
+                                      IsEnabled="{Binding HasSelectedOnlineCandidate}"
+                                      IsChecked="{Binding LicenseAccepted}"
+                                      Content="我已阅读并接受该厂商的许可条款(勾选后才能下载)"/>
+                        </WrapPanel>
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Foreground="#FFB45309"
+                                   Text="说明:厂商驱动的许可条款是给最终用户的,程序不会替你接受。勾选动作与时间会写入审计日志,作为凭据。"/>
+                    </StackPanel>
+
                     <WrapPanel Margin="0,8,0,0">
                         <Button Content="① 下载并校验" Padding="12,4" Margin="0,0,8,0"
                                 Command="{Binding DownloadOnlineCommand}"/>
@@ -107,6 +122,9 @@
                         <Button Content="选择本地驱动包…" Padding="12,4" Margin="14,0,0,0"
                                 Command="{Binding PickLocalPackageCommand}"
                                 ToolTip="用于接手你自己从浏览器下载的驱动包(.cab / .zip / .exe / .inf)"/>
+                        <Button Content="批量导入一个文件夹…" Padding="12,4" Margin="8,0,0,0"
+                                Command="{Binding ImportFolderCommand}"
+                                ToolTip="把文件夹里所有驱动包一次性解包、验证签名并入库"/>
                     </WrapPanel>
                     <TextBlock Margin="0,4,0,0" Foreground="#FF666666" TextWrapping="Wrap"
                                Text="如果你是从浏览器手动下载的驱动包,点「选择本地驱动包…」指定它,再走 ②③ 即可(程序会接手校验、解包与入库)。"/>

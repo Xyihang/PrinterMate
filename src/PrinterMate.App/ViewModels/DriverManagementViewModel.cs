@@ -163,6 +163,7 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
     private string? _downloadedPackagePath;
     private OnlinePackageResult? _package;
     private string? _selectedOnlineDriverName;
+    private bool _licenseAccepted;
 
     private string _keyword = string.Empty;
     private string _brandFilter = AllBrands;
@@ -181,10 +182,12 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
 
         SearchOnlineCommand = new AsyncRelayCommand(() => SearchOnlineAsync(), () => !OnlineBusy);
         OpenCatalogCommand = new RelayCommand(OpenCatalog);
-        DownloadOnlineCommand = new AsyncRelayCommand(() => DownloadOnlineAsync(), () => !OnlineBusy && SelectedOnlineCandidate is not null);
+        DownloadOnlineCommand = new AsyncRelayCommand(() => DownloadOnlineAsync(), () => !OnlineBusy && SelectedOnlineCandidate is not null && LicenseAccepted);
         ExtractOnlineCommand = new AsyncRelayCommand(() => ExtractOnlineAsync(), () => !OnlineBusy && _downloadedPackagePath is not null);
         ImportOnlineCommand = new AsyncRelayCommand(() => ImportOnlineAsync(), () => !OnlineBusy && _package is not null);
         PickLocalPackageCommand = new RelayCommand(PickLocalPackage, () => !OnlineBusy);
+        OpenVendorPageCommand = new RelayCommand(OpenVendorPage);
+        ImportFolderCommand = new AsyncRelayCommand(() => ImportFolderAsync(), () => !OnlineBusy);
 
         foreach (var site in ThirdPartyDriverSiteLauncher.Sites)
         {
@@ -237,6 +240,46 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
     /// <summary>接手用户自己下载的驱动包(浏览器下载的文件不在程序下载目录里)。</summary>
     public RelayCommand PickLocalPackageCommand { get; }
 
+    /// <summary>打开所选品牌对应的厂商官方页(下载前给用户看来源与许可条款)。</summary>
+    public RelayCommand OpenVendorPageCommand { get; }
+
+    /// <summary>把下载目录里的驱动包一次性解包、验证并入库。</summary>
+    public AsyncRelayCommand ImportFolderCommand { get; }
+
+    /// <summary>
+    /// 使用者是否已显式确认"已阅读并接受该厂商的许可条款"。
+    /// 驱动下载按钮在勾选前保持禁用 —— 厂商许可是给最终用户的,程序不能替他接受。
+    /// 换取候选(可能换品牌)时自动重置。
+    /// </summary>
+    public bool LicenseAccepted
+    {
+        get => _licenseAccepted;
+        set
+        {
+            if (SetProperty(ref _licenseAccepted, value))
+            {
+                DownloadOnlineCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool HasSelectedOnlineCandidate => SelectedOnlineCandidate is not null;
+
+    /// <summary>许可确认区要展示的"即将下载什么、属于哪个厂商"。</summary>
+    public string LicenseBrandText
+    {
+        get
+        {
+            var brand = string.IsNullOrWhiteSpace(OnlineBrand) ? "(未选择品牌)" : OnlineBrand;
+            var driver = SelectedOnlineCandidate?.DisplayName ?? "(未选择驱动包)";
+            return $"待下载:{driver}\n所属厂商:{brand}";
+        }
+    }
+
+    public string OfficialPageUrl => OnlineDriverService.GetOfficialDriverPage(OnlineBrand) ?? string.Empty;
+
+    public string DownloadFolderHint => $"下载文件会保存到:{OnlineDriverInstaller.DownloadDirectory}";
+
     public string OnlineHint =>
         "只从白名单官方源获取:Microsoft Update Catalog。下载后强制校验 HTTPS 证书、SHA256 与 Authenticode 数字签名,"
         + "任一不通过都会拒绝并写入审计日志。检索不到时不会静默降级,会给出官方下载页指引。";
@@ -253,6 +296,7 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
                 ExtractOnlineCommand.RaiseCanExecuteChanged();
                 ImportOnlineCommand.RaiseCanExecuteChanged();
                 PickLocalPackageCommand.RaiseCanExecuteChanged();
+                ImportFolderCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -260,7 +304,16 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
     public string OnlineBrand
     {
         get => _onlineBrand;
-        set => SetProperty(ref _onlineBrand, value);
+        set
+        {
+            if (SetProperty(ref _onlineBrand, value))
+            {
+                // 换品牌 = 换厂商 = 必须重新确认该厂商的许可条款
+                LicenseAccepted = false;
+                OnPropertyChanged(nameof(LicenseBrandText));
+                OnPropertyChanged(nameof(OfficialPageUrl));
+            }
+        }
     }
 
     public string OnlineKeyword
@@ -298,6 +351,10 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         {
             if (SetProperty(ref _selectedOnlineCandidate, value))
             {
+                // 换了候选(可能换了品牌)就必须重新确认该厂商的许可条款
+                LicenseAccepted = false;
+                OnPropertyChanged(nameof(LicenseBrandText));
+                OnPropertyChanged(nameof(OfficialPageUrl));
                 DownloadOnlineCommand.RaiseCanExecuteChanged();
             }
         }
@@ -363,6 +420,86 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         => OpenUrl(
             OnlineDriverService.BuildCatalogSearchUrl(OnlineBrand, OnlineKeyword),
             "已在浏览器中打开 Microsoft Update Catalog 搜索页。");
+
+    private void OpenVendorPage()
+    {
+        var url = OfficialPageUrl;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            StatusHub.Warn("在线补齐", $"没有登记「{OnlineBrand}」的厂商官方页。", "请自行到厂商官网查找该型号的驱动与许可条款。");
+            return;
+        }
+
+        OpenUrl(url, $"已在浏览器中打开 {OnlineBrand} 厂商官方页(请在该页确认许可条款)。");
+    }
+
+    /// <summary>批量导入:选一个文件夹,把里面的驱动包逐个解包、验证、入库。</summary>
+    private async Task ImportFolderAsync()
+    {
+        string? folder;
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = "选择存放驱动包的文件夹",
+                Multiselect = false,
+            };
+
+            folder = dialog.ShowDialog() == true ? dialog.FolderName : null;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("driver-folder-dialog", ex.ToString());
+            StatusHub.Error("批量导入", "打开文件夹选择器失败:" + ex.Message);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return;
+        }
+
+        OnlineBusy = true;
+        OnlineResultText = string.Empty;
+        try
+        {
+            OnlineStageText = $"正在批量导入 {folder} …";
+
+            var progress = new Progress<string>(text => OnlineStageText = text);
+            var results = await Task.Run(() => _online.ImportFolder(folder, progress));
+
+            var ok = results.Where(r => r.Success).ToList();
+            var failed = results.Where(r => !r.Success).ToList();
+
+            OnlineResultText =
+                $"批量导入完成:成功 {ok.Count} 个,失败 {failed.Count} 个\n"
+                + string.Join("\n", ok.Select(r => $"  ✅ {r.Name} → {r.Message}"))
+                + (failed.Count == 0
+                    ? string.Empty
+                    : "\n" + string.Join("\n", failed.Select(r => $"  ⚠ {r.Name}:{r.Message}")));
+
+            if (ok.Count > 0)
+            {
+                StatusHub.Success("批量导入", $"成功导入 {ok.Count} 个驱动包。", "驱动库状态已刷新。");
+                LoadLibrary();
+            }
+            else
+            {
+                StatusHub.Warn("批量导入", "没有任何驱动包导入成功。", "请查看下方逐项原因。");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("driver-folder-import", ex.ToString());
+            OnlineResultText = ex.Message;
+            StatusHub.Error("批量导入", "批量导入失败:" + ex.Message);
+        }
+        finally
+        {
+            OnlineBusy = false;
+            OnlineStageText = string.Empty;
+        }
+    }
 
     private void OpenUrl(string url, string message)
     {
@@ -463,6 +600,13 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
                 _ => "完成",
             };
         });
+
+        // 记下"使用者已显式接受该厂商许可条款",作为合规凭据写入审计日志。
+        // 厂商许可是给最终用户的,程序不能替他接受,所以这一步必须由勾选触发并留痕。
+        _online.RecordLicenseAcceptance(
+            string.IsNullOrWhiteSpace(OnlineBrand) ? "(未知厂商)" : OnlineBrand,
+            candidate.Url,
+            OfficialPageUrl);
 
         try
         {

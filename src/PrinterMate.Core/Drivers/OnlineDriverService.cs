@@ -30,6 +30,10 @@ public sealed record OnlineDriverCandidate(
 /// </summary>
 public sealed class OnlineDriverService
 {
+    /// <summary>取某品牌的厂商官方驱动/支持页(用于在用户确认许可条款前展示来源)。</summary>
+    public static string? GetOfficialDriverPage(string brand)
+        => OfficialDriverPages.TryGetValue(brand ?? string.Empty, out var url) ? url : null;
+
     /// <summary>各品牌官方驱动支持页(HTTPS)。检索失败时作为兜底指引。</summary>
     private static readonly Dictionary<string, string> OfficialDriverPages = new(StringComparer.OrdinalIgnoreCase)
     {
