@@ -9,9 +9,9 @@
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="新手必读(30 秒看懂)"/>
 
-            <Border Style="{StaticResource Card}" Background="{StaticResource Brush.InfoSurface}" BorderBrush="{StaticResource Brush.Accent}" BorderThickness="1">
+            <Border Style="{StaticResource CardInfo}">
                 <StackPanel>
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold" FontSize="{StaticResource Font.Size.Body}"
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" FontSize="{StaticResource Font.Size.Body}"
                                Text="这个工具帮你做三件事:找到打印机、把驱动装好、打一张测试页。你不需要去网上找驱动。"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{StaticResource Brush.Accent}"
                                Text="最常见的情况:打印机用 USB 线插在这台电脑上。下面是完整流程,按顺序做一遍就会了。"/>
@@ -24,22 +24,22 @@
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock TextWrapping="Wrap">
-                        <Run FontWeight="Bold" Text="第 1 步  "/>
+                        <Run FontWeight="SemiBold" Text="第 1 步  "/>
                         <Run Text="确认打印机已开机,USB 线两端都插好(换一个 USB 口有时也管用,优先机箱后面的口)。"/>
                     </TextBlock>
                     <TextBlock Margin="0,3,0,0" TextWrapping="Wrap">
-                        <Run FontWeight="Bold" Text="第 2 步  "/>
+                        <Run FontWeight="SemiBold" Text="第 2 步  "/>
                         <Run Text="打开左侧「设备发现与连接」页,点「扫描 USB 打印机」,列表里就会出现你的打印机。"/>
                     </TextBlock>
                     <TextBlock Margin="0,3,0,0" TextWrapping="Wrap">
-                        <Run FontWeight="Bold" Text="第 3 步  "/>
+                        <Run FontWeight="SemiBold" Text="第 3 步  "/>
                         <Run Text="点那台打印机后面的「一键连接」。程序会自己判断要不要装驱动;要装的时候会弹管理员确认框,点「是」就行。"/>
                     </TextBlock>
 
-                    <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Foreground="{StaticResource Brush.Success}" FontWeight="Bold"
+                    <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Foreground="{StaticResource Brush.Success}" FontWeight="SemiBold"
                                Text="连上之后,去「打印与测试页」页点「打印系统测试页」——能打出纸,就说明整条链路都通了。"/>
 
-                    <TextBlock Margin="0,10,0,0" FontWeight="Bold" Text="列表里「状态」这一列是什么意思:"/>
+                    <TextBlock Margin="0,10,0,0" FontWeight="SemiBold" Text="列表里「状态」这一列是什么意思:"/>
                     <TextBlock Margin="0,2,0,0" TextWrapping="Wrap" Text="· 已就绪 —— 已经能用,直接打印就行。"/>
                     <TextBlock TextWrapping="Wrap" Text="· 需要创建队列 —— 设备插着,但系统里还没建立这台打印机,点「一键连接」即可。"/>
                     <TextBlock TextWrapping="Wrap" Text="· 需更换驱动 —— 现在用的是通用占位驱动,功能不全,建议换成厂商驱动。"/>
@@ -52,21 +52,21 @@
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold"
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold"
                                Text="点「一键连接」时,程序按下面的顺序自动挑一条最合适的路,谁先成功就用谁:"/>
 
                     <TextBlock Margin="0,8,0,0" TextWrapping="Wrap">
-                        <Run FontWeight="Bold" Text="① 免驱直连  "/>
+                        <Run FontWeight="SemiBold" Text="① 免驱直连  "/>
                         <Run Text="设备支持 Mopria / IPP(多见于网络打印机)时,用系统自带驱动直接建队列,不装任何东西。USB 老设备一般走不到这条路。"/>
                     </TextBlock>
 
                     <TextBlock Margin="0,6,0,0" TextWrapping="Wrap">
-                        <Run FontWeight="Bold" Text="② 内置驱动库  "/>
+                        <Run FontWeight="SemiBold" Text="② 内置驱动库  "/>
                         <Run Text="程序自带各品牌通用驱动清单,驱动包已入库的话可以完全离线安装。这是最省事、最安全的一条路。"/>
                     </TextBlock>
 
                     <TextBlock Margin="0,6,0,0" TextWrapping="Wrap">
-                        <Run FontWeight="Bold" Text="③ 在线补齐  "/>
+                        <Run FontWeight="SemiBold" Text="③ 在线补齐  "/>
                         <Run Text="内置库里没有时,去微软官方更新服务检索并下载。下载后会强制校验 HTTPS 证书、SHA256 和数字签名,任何一项不通过都会拒绝。"/>
                     </TextBlock>
 
@@ -80,11 +80,11 @@
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold" Text="1) 先看驱动库状态(页面最上方)"/>
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Text="1) 先看驱动库状态(页面最上方)"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,2,0,8" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="这里告诉你:驱动库在哪个目录、清单版本、有多少条能直接用、哪些条目不可以用以及原因。红色那一块是所有「不能直接装」的条目,原因都写清楚了。"/>
 
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold" Text="2) 在线补齐(联网获取官方驱动,三步按钮)"/>
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Text="2) 在线补齐(联网获取官方驱动,三步按钮)"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,2,0,4" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="选品牌 → 填型号关键词 → 点「检索官方源」。列表出现候选后,选中一条,然后依次点三个按钮:"/>
                     <TextBlock TextWrapping="Wrap" Margin="12,0,0,0" Text="① 下载并校验 —— 下载到本机并用官方公布的 SHA256 与数字签名验证。"/>
@@ -93,19 +93,19 @@
                     <TextBlock TextWrapping="Wrap" Margin="0,4,0,8" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="前两步都不改动系统;只有第③步写文件到驱动库目录,真正安装发生在「一键连接」时。"/>
 
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold" Text="3) 自己从浏览器下载的驱动包"/>
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Text="3) 自己从浏览器下载的驱动包"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,2,0,8" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="如果你从官网下载了 .cab / .zip / .exe 驱动包,点「选择本地驱动包…」指定它,然后同样走 ② ③ 即可 —— 程序会替你校验、解包、入库。"/>
 
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold" Text="4) 内置驱动许可(个人自用需要打开)"/>
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Text="4) 内置驱动许可(个人自用需要打开)"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,2,0,8" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="可以全开或按品牌单独开。这个开关只决定「允不允许从本地驱动库安装」,不会放宽任何签名与哈希校验;开启记录会写进本机策略文件与审计日志。"/>
 
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold" Text="5) 人工选择驱动"/>
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Text="5) 人工选择驱动"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,2,0,8" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="自动匹配不准时,可以按品牌或型号关键词检索候选,选中后点「设为连接时使用的驱动」,之后「一键连接」会优先用它。"/>
 
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold" Text="6) 第三方驱动站检索(风险自担)"/>
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Text="6) 第三方驱动站检索(风险自担)"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,2,0,0" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="这一块只是帮你在浏览器里打开第三方驱动站的搜索页,程序不会从那里下载或安装任何东西。这些站点并非官方来源,包可能是重新打包的,风险由你自己承担。"/>
                 </StackPanel>
@@ -116,11 +116,11 @@
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold" Text="「打印与测试页」页"/>
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Text="「打印与测试页」页"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,2,0,8" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="可以打系统测试页、程序自绘的测试页(带色条和对齐网格),也可以打印本地文件(PDF / 图片 / 文本)或直接投递 RAW 数据。只是想把测试页打出来时,不用扫描也不用装驱动。"/>
 
-                    <TextBlock TextWrapping="Wrap" FontWeight="Bold" Text="「任务队列与状态」页"/>
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Text="「任务队列与状态」页"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,2,0,0" Foreground="{StaticResource Brush.TextSecondary}"
                                Text="看当前打印任务、暂停/恢复/取消、查看打印机健康状态(缺纸、卡纸、脱机等都有中文说明和处理建议)。遇到问题可以在这里导出诊断报告发给我们。"/>
                 </StackPanel>
