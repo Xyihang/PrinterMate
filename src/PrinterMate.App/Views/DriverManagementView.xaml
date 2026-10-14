@@ -104,7 +104,6 @@
                             <Button Content="查看厂商官方页 / 许可条款" Padding="10,3" Margin="0,0,10,0"
                                     Command="{Binding OpenVendorPageCommand}"/>
                             <CheckBox VerticalAlignment="Center"
-                                      IsEnabled="{Binding HasSelectedOnlineCandidate}"
                                       IsChecked="{Binding LicenseAccepted}"
                                       Content="我已阅读并接受该厂商的许可条款(勾选后才能下载)"/>
                         </WrapPanel>

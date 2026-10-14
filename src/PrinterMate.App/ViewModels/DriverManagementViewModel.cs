@@ -355,6 +355,7 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
                 LicenseAccepted = false;
                 OnPropertyChanged(nameof(LicenseBrandText));
                 OnPropertyChanged(nameof(OfficialPageUrl));
+                OnPropertyChanged(nameof(HasSelectedOnlineCandidate));
                 DownloadOnlineCommand.RaiseCanExecuteChanged();
             }
         }

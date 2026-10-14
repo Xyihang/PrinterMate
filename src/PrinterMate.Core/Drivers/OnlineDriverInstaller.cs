@@ -266,6 +266,91 @@ public sealed class OnlineDriverInstaller
     }
 
     /// <summary>
+    /// 批量下载:把各品牌的官方驱动包下到下载目录,**不导入、不改动驱动库**。
+    ///
+    /// 设计边界:调用方必须已经取得使用者对该厂商许可条款的显式同意
+    /// (由 <see cref="RecordLicenseAcceptance"/> 留痕),本方法不会替用户接受任何条款。
+    /// </summary>
+    public async Task<IReadOnlyList<BatchItemResult>> DownloadAllAsync(
+        IReadOnlyList<string> brands,
+        int candidatesPerBrand = 3,
+        IProgress<string>? progress = null,
+        CancellationToken ct = default)
+    {
+        var results = new List<BatchItemResult>();
+        Directory.CreateDirectory(DownloadDirectory);
+
+        foreach (var brand in brands)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report($"[{brand}] 检索 Microsoft Update Catalog …");
+
+            try
+            {
+                var search = await SearchAsync(brand, null, ct).ConfigureAwait(false);
+                if (!search.IsSuccess || search.Value is null || search.Value.Count == 0)
+                {
+                    results.Add(new BatchItemResult(brand, false, search.Message));
+                    continue;
+                }
+
+                var tried = 0;
+                var succeeded = false;
+
+                foreach (var candidate in search.Value)
+                {
+                    if (tried >= candidatesPerBrand)
+                    {
+                        break;
+                    }
+
+                    tried++;
+                    ct.ThrowIfCancellationRequested();
+                    progress?.Report($"[{brand}] 下载 {candidate.DisplayName}({candidate.Size})…");
+
+                    var download = await DownloadAsync(candidate, null, ct).ConfigureAwait(false);
+                    if (!download.IsSuccess || download.Value is null)
+                    {
+                        progress?.Report($"[{brand}] 该候选未通过校验:{download.Message}");
+                        continue;
+                    }
+
+                    var sizeMb = new FileInfo(download.Value.FilePath).Length / 1024 / 1024;
+                    results.Add(new BatchItemResult(
+                        brand,
+                        true,
+                        $"{Path.GetFileName(download.Value.FilePath)}({sizeMb} MB) — {candidate.DisplayName}"));
+
+                    progress?.Report($"[{brand}] ✅ 已下载:{download.Value.FilePath}");
+                    succeeded = true;
+                    break;
+                }
+
+                if (!succeeded)
+                {
+                    results.Add(new BatchItemResult(brand, false, $"尝试了 {tried} 个候选,均未通过校验"));
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                results.Add(new BatchItemResult(brand, false, ex.Message));
+            }
+        }
+
+        _audit.Write(
+            "批量下载-完成",
+            DownloadDirectory,
+            "完成",
+            $"共 {brands.Count} 个品牌,成功 {results.Count(r => r.Success)} 个;均为只下载不入库");
+
+        return results;
+    }
+
+    /// <summary>
     /// 批量导入:把一个文件夹里的驱动包逐个「解包 → 验证签名 → 入库」。
     /// 品牌从 INF 里解析出的驱动名推断;推断不出来的会明确报出来,让你用「选择本地驱动包…」手动指定。
     /// </summary>
