@@ -4,8 +4,9 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="目标打印机"/>
-            <WrapPanel Margin="0,0,0,6">
+            <!-- ══ 目标打印机(前置条件)══ -->
+            <TextBlock Style="{StaticResource SectionHeader}" Margin="0,0,0,8" Text="目标打印机"/>
+            <WrapPanel Margin="0,0,0,8">
                 <TextBlock Text="打印队列:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                 <ComboBox Width="360"
                           ItemsSource="{Binding Printers}"
@@ -17,23 +18,57 @@
             <TextBlock Style="{StaticResource Hint}" Text="{Binding SelectedPrinterText}"/>
             <TextBlock Style="{StaticResource Hint}" Text="{Binding PrinterSummary}"/>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="测试页"/>
-            <WrapPanel Margin="0,0,0,6">
-                <Button Content="打印系统测试页" Command="{Binding PrintSystemTestPageCommand}"/>
+            <!-- ══ 打印测试页(主操作)══ -->
+            <TextBlock Style="{StaticResource SectionHeader}" Margin="0,0,0,8" Text="打印测试页"/>
+            <WrapPanel Margin="0,0,0,8">
+                <Button Style="{StaticResource ButtonPrimary}"
+                        Content="打印系统测试页"
+                        Command="{Binding PrintSystemTestPageCommand}"/>
                 <Button Content="打印自绘测试页" Command="{Binding PrintCustomTestPageCommand}"/>
             </WrapPanel>
-            <TextBlock Style="{StaticResource Hint}"
-                       Text="「系统测试页」调用 Windows 自带的测试页功能,用于验证驱动与端口是否通畅;「自绘测试页」由程序用矢量绘图生成,包含色彩条、灰阶条与对齐网格,完全绕过驱动自带的图案。"/>
 
-            <TextBlock Style="{StaticResource SectionHeader}" Text="文件打印"/>
-            <WrapPanel Margin="0,0,0,6">
+            <!-- 说明收敛为折叠项,不占首屏纵向空间 -->
+            <Expander IsExpanded="False">
+                <Expander.Header>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0" Text="两种测试页有什么区别?"/>
+                </Expander.Header>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock TextWrapping="Wrap"
+                                   Text="· 系统测试页 —— 调用 Windows 自带的测试页功能,用于验证驱动与端口是否通畅。"/>
+                        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                                   Text="· 自绘测试页 —— 由程序用矢量绘图生成,包含色彩条、灰阶条与对齐网格,完全绕过驱动自带的图案,因此能区分「驱动坏了」和「图案本身有问题」。"/>
+                    </StackPanel>
+                </Border>
+            </Expander>
+
+            <!-- ══ 文件打印 ══ -->
+            <TextBlock Style="{StaticResource SectionHeader}" Margin="0,0,0,8" Text="打印文件"/>
+            <WrapPanel Margin="0,0,0,8">
                 <Button Content="打印本地文件" Command="{Binding PrintFileCommand}"/>
-                <Button Content="投递 RAW 数据" Command="{Binding PrintRawCommand}"/>
+                <Button Content="投递 RAW 数据(高级)" Command="{Binding PrintRawCommand}"/>
             </WrapPanel>
             <TextBlock Style="{StaticResource Hint}" Text="{Binding SelectedFilePath}"/>
             <TextBlock Style="{StaticResource Hint}" Text="{Binding DetectedKindText}"/>
-            <TextBlock Style="{StaticResource Hint}"
-                       Text="支持类型:文本(.txt/.log/.csv/.md/.json/.xml)、图片(.png/.jpg/.bmp/.gif/.tif)、XPS(.xps/.oxps)、PDF(.pdf)、RAW(.prn/.ps/.pcl/.zpl/.bin)。PDF 会调用系统默认程序打印;RAW 会原样把字节发送到打印队列。"/>
+
+            <!-- 危险操作明确标注:RAW 原样发字节,打错可能出乱码或浪费纸张 -->
+            <TextBlock Style="{StaticResource TextWarning}"
+                       Margin="0,2,0,8"
+                       Text="注意:「投递 RAW 数据」会把文件字节原样发送到打印队列,不做任何解析。选错文件类型可能打出成堆乱码或浪费纸张,请确认文件与实际打印机语言一致后再投递。"/>
+
+            <Expander IsExpanded="False">
+                <Expander.Header>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0" Text="支持哪些文件类型?点开查看"/>
+                </Expander.Header>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock TextWrapping="Wrap"
+                                   Text="文本(.txt / .log / .csv / .md / .json / .xml)、图片(.png / .jpg / .bmp / .gif / .tif)、XPS(.xps / .oxps)、PDF(.pdf)、RAW(.prn / .ps / .pcl / .zpl / .bin)。"/>
+                        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                                   Text="PDF 会调用系统默认程序打印;RAW 会原样把字节发送到打印队列。"/>
+                    </StackPanel>
+                </Border>
+            </Expander>
 
         </StackPanel>
     </ScrollViewer>
