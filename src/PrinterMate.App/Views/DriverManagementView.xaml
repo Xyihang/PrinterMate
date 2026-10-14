@@ -42,7 +42,7 @@
         <StackPanel>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="第三方驱动站检索(风险自担)"/>
-            <Border Style="{StaticResource Card}" BorderBrush="{StaticResource Brush.Warning}" BorderThickness="1">
+            <Border Style="{StaticResource CardWarning}">
                 <StackPanel>
                     <TextBlock Text="{Binding SiteHint}" TextWrapping="Wrap" Foreground="{StaticResource Brush.Warning}"/>
                     <WrapPanel Margin="0,8,0,0">
@@ -51,9 +51,9 @@
                                   SelectedItem="{Binding SelectedSite}"
                                   DisplayMemberPath="DisplayName" Margin="0,0,12,0"/>
                         <TextBlock Text="打印机型号:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBox Width="220" Padding="4,3" Margin="0,0,12,0"
+                        <TextBox Width="220" Margin="0,0,12,0"
                                  Text="{Binding SiteModel, UpdateSourceTrigger=PropertyChanged}"/>
-                        <Button Content="在浏览器中打开搜索页" Padding="12,4"
+                        <Button Content="在浏览器中打开搜索页"
                                 Command="{Binding OpenSiteSearchCommand}"/>
                     </WrapPanel>
                     <TextBlock Margin="0,6,0,0" Foreground="{StaticResource Brush.TextSecondary}" TextWrapping="Wrap"
@@ -70,14 +70,15 @@
                         <TextBlock Text="品牌:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <ComboBox Width="150" ItemsSource="{Binding Brands}" SelectedItem="{Binding OnlineBrand}" Margin="0,0,10,0"/>
                         <TextBlock Text="型号关键词:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBox Width="200" Padding="4,3" Margin="0,0,10,0"
+                        <TextBox Width="200" Margin="0,0,10,0"
                                  Text="{Binding OnlineKeyword, UpdateSourceTrigger=PropertyChanged}"/>
-                        <Button Content="检索官方源" Padding="12,4" Command="{Binding SearchOnlineCommand}"/>
-                        <Button Content="打开 Microsoft Update Catalog" Padding="12,4" Margin="8,0,0,0"
+                        <Button Style="{StaticResource ButtonPrimary}"
+                                Content="检索官方源" Command="{Binding SearchOnlineCommand}"/>
+                        <Button Content="打开 Microsoft Update Catalog" Margin="8,0,0,0"
                                 Command="{Binding OpenCatalogCommand}"/>
                     </WrapPanel>
 
-                    <TextBlock Margin="0,8,0,0" Text="{Binding OnlineSummary}" TextWrapping="Wrap" FontWeight="Bold"/>
+                    <TextBlock Margin="0,8,0,0" Text="{Binding OnlineSummary}" TextWrapping="Wrap" FontWeight="SemiBold"/>
 
                     <ListBox Style="{StaticResource EmbeddedList}"
                              ItemsSource="{Binding OnlineCandidates}"
@@ -101,7 +102,7 @@
                         <TextBlock Text="{Binding LicenseBrandText}" TextWrapping="Wrap" Foreground="{StaticResource Brush.TextSecondary}"/>
                         <TextBlock Text="{Binding DownloadFolderHint}" TextWrapping="Wrap" Foreground="{StaticResource Brush.TextSecondary}" Margin="0,2,0,0"/>
                         <WrapPanel Margin="0,6,0,0">
-                            <Button Content="查看厂商官方页 / 许可条款" Padding="10,3" Margin="0,0,10,0"
+                            <Button Content="查看厂商官方页 / 许可条款" Margin="0,0,10,0"
                                     Command="{Binding OpenVendorPageCommand}"/>
                             <CheckBox VerticalAlignment="Center"
                                       IsChecked="{Binding LicenseAccepted}"
@@ -112,16 +113,17 @@
                     </StackPanel>
 
                     <WrapPanel Margin="0,8,0,0">
-                        <Button Content="① 下载并校验" Padding="12,4" Margin="0,0,8,0"
+                        <Button Style="{StaticResource ButtonPrimary}"
+                                Content="① 下载并校验" Margin="0,0,8,0"
                                 Command="{Binding DownloadOnlineCommand}"/>
-                        <Button Content="② 解包并验证驱动包" Padding="12,4" Margin="0,0,8,0"
+                        <Button Content="② 解包并验证驱动包" Margin="0,0,8,0"
                                 Command="{Binding ExtractOnlineCommand}"/>
-                        <Button Content="③ 加入本机驱动库" Padding="12,4"
+                        <Button Content="③ 加入本机驱动库"
                                 Command="{Binding ImportOnlineCommand}"/>
-                        <Button Content="选择本地驱动包…" Padding="12,4" Margin="14,0,0,0"
+                        <Button Content="选择本地驱动包…" Margin="14,0,0,0"
                                 Command="{Binding PickLocalPackageCommand}"
                                 ToolTip="用于接手你自己从浏览器下载的驱动包(.cab / .zip / .exe / .inf)"/>
-                        <Button Content="批量导入一个文件夹…" Padding="12,4" Margin="8,0,0,0"
+                        <Button Content="批量导入一个文件夹…" Margin="8,0,0,0"
                                 Command="{Binding ImportFolderCommand}"
                                 ToolTip="把文件夹里所有驱动包一次性解包、验证签名并入库"/>
                     </WrapPanel>
@@ -146,7 +148,7 @@
             </Border>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="内置驱动库状态(离线可用的关键)"/>
-            <TextBlock Style="{StaticResource Hint}" Text="{Binding LibraryHeadline}" FontWeight="Bold"/>
+            <TextBlock Style="{StaticResource Hint}" Text="{Binding LibraryHeadline}" FontWeight="SemiBold"/>
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
@@ -155,18 +157,16 @@
                     <TextBlock Text="{Binding ManifestPath, StringFormat=清单文件:{0}}" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding LibraryVersion, StringFormat=清单版本:{0}}"/>
                     <TextBlock Text="{Binding ArchitectureText, StringFormat=当前架构 / 系统:{0}}"/>
-                    <TextBlock Margin="0,4,0,0" FontWeight="Bold"
+                    <TextBlock Margin="0,4,0,0" FontWeight="SemiBold"
                                Text="{Binding UnavailableEntries, StringFormat=不可直接安装的条目数:{0}}"/>
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource Card}"
-                    BorderBrush="{StaticResource Brush.Danger}"
-                    BorderThickness="1"
+            <Border Style="{StaticResource CardDanger}"
                     Visibility="{Binding HasMissingPackages, Converter={StaticResource BoolToVisibility}}">
                 <Expander IsExpanded="False">
                     <Expander.Header>
-                        <TextBlock Text="{Binding MissingHeader}" FontWeight="Bold" Foreground="{StaticResource Brush.Danger}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding MissingHeader}" FontWeight="SemiBold" Foreground="{StaticResource Brush.Danger}" TextWrapping="Wrap"/>
                     </Expander.Header>
                     <StackPanel>
                     <ItemsControl ItemsSource="{Binding MissingPackages}" Margin="0,4,0,0">
@@ -184,7 +184,7 @@
             <Border Style="{StaticResource Card}">
                 <Expander IsExpanded="False">
                     <Expander.Header>
-                        <TextBlock Text="{Binding PolicySummary, StringFormat=当前策略:{0}}" TextWrapping="Wrap" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding PolicySummary, StringFormat=当前策略:{0}}" TextWrapping="Wrap" FontWeight="SemiBold"/>
                     </Expander.Header>
                     <StackPanel>
                     <TextBlock Text="{Binding PolicyHint}" TextWrapping="Wrap" Foreground="{StaticResource Brush.TextSecondary}" Margin="0,4,0,0"/>
@@ -228,7 +228,7 @@
                 <TreeView Style="{StaticResource EmbeddedTree}" ItemsSource="{Binding BrandGroups}">
                 <TreeView.ItemTemplate>
                     <HierarchicalDataTemplate ItemsSource="{Binding Entries}">
-                        <TextBlock Text="{Binding Header}" FontWeight="Bold" Margin="0,2"/>
+                        <TextBlock Text="{Binding Header}" FontWeight="SemiBold" Margin="0,2"/>
                         <HierarchicalDataTemplate.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Margin="0,1">
@@ -253,7 +253,7 @@
                 <TextBlock Text="品牌:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                 <ComboBox Width="150" ItemsSource="{Binding Brands}" SelectedItem="{Binding BrandFilter}" Margin="0,0,10,0"/>
                 <TextBlock Text="型号关键词:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <TextBox Width="200" Padding="4,3" Margin="0,0,10,0"
+                <TextBox Width="200" Margin="0,0,10,0"
                          Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}"/>
                 <Button Content="检索候选驱动" Command="{Binding SearchCandidatesCommand}"/>
                 <Button Content="刷新驱动库状态" Command="{Binding RefreshCommand}"/>
