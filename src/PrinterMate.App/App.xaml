@@ -18,6 +18,8 @@
                      注意:必须排在 Controls 之后 —— 表头/行/单元格的隐式样式
                      要能覆盖 Controls 里的容器样式。 -->
                 <ResourceDictionary Source="Resources/DataViews.xaml"/>
+                <!-- 容器样式层:滚动条 / Expander / ToolTip(TASK-007) -->
+                <ResourceDictionary Source="Resources/Containers.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <conv:StatusLevelBrushConverter x:Key="StatusLevelBrush"/>
