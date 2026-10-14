@@ -166,7 +166,8 @@ internal sealed class SandboxLibrary : IDisposable
 
         File.WriteAllText(Path.Combine(root, "Catalog", "drivers.json"), manifest);
 
-        var library = DriverLibrary.Load(root, TestPolicies.Isolated());
+        // 沙箱要的是"这份清单就是全部",不与随包基线合并
+        var library = DriverLibrary.Load(root, TestPolicies.Isolated(), mergeWithBaseline: false);
         return new SandboxLibrary(root, library, library.Entries.Single());
     }
 

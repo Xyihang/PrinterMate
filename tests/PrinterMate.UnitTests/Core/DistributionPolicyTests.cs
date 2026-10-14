@@ -147,6 +147,66 @@ public class DistributionPolicyTests
     }
 
     [Fact]
+    public void 本机清单必须与随包清单合并而不是覆盖()
+    {
+        // 回归用例:早期实现"磁盘清单存在就整个替换随包清单",
+        // 导致本机一旦存在旧版清单,程序升级后新增的品牌/型号永远不可见
+        // (实测:随包 50 条 vs 本机旧清单 22 条,新加的 12 个品牌全部消失)。
+        var root = Path.Combine(Path.GetTempPath(), "pm-merge-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "Catalog"));
+
+        try
+        {
+            var importedHash = new string('C', 64);
+            File.WriteAllText(Path.Combine(root, "Catalog", "drivers.json"), $$"""
+                {
+                  "schemaVersion": "1.0",
+                  "libraryVersion": "local-old",
+                  "entries": [
+                    {
+                      "brand": "HP",
+                      "family": "Universal Print Driver",
+                      "pdl": "PCL6",
+                      "driverName": "HP Universal Printing PCL 6",
+                      "infRelPath": "Drivers/HP/local/hpcu060.inf",
+                      "arch": ["x64"],
+                      "os": ["win10", "win11"],
+                      "version": "1",
+                      "signerSubject": "CN=HP Inc",
+                      "redistributable": true,
+                      "modelPatterns": ["LaserJet*"],
+                      "hardwareIdPatterns": ["USBPRINT\\HP*"],
+                      "sha256": { "x64": "{{importedHash}}", "arm64": "" },
+                      "priority": 100
+                    }
+                  ]
+                }
+                """);
+
+            var baselineCount = TestLibrary.Shipped().Entries.Count;
+            var library = DriverLibrary.Load(root, TestPolicies.Isolated());
+
+            // 1) 随包基线里的新品牌必须仍然在
+            Assert.Contains("Xerox", library.Brands);
+            Assert.Contains("Zebra", library.Brands);
+            Assert.Contains("HPRT", library.Brands);
+
+            // 2) 本机条目必须覆盖同键(品牌+PDL)的随包条目
+            var hp = library.Entries.Single(e => e.Brand == "HP" && e.Pdl == PrintDescriptionLanguage.PCL6);
+            Assert.Equal(importedHash, hp.Sha256.X64);
+            Assert.True(hp.Redistributable);
+            Assert.Contains("local", hp.InfRelPath, StringComparison.OrdinalIgnoreCase);
+
+            // 3) 总量 = 随包基线(HP|PCL6 被替换,不应增减)
+            Assert.Equal(baselineCount, library.Entries.Count);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void 驱动库状态应包含分发策略摘要()
     {
         var status = TestLibrary.Shipped().GetStatus("x64");

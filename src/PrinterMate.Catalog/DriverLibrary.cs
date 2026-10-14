@@ -42,13 +42,22 @@ public sealed class DriverLibrary
         AllowTrailingCommas = true,
     };
 
-    private DriverLibrary(string root, string manifestPath, DriverManifest manifest, bool embedded, DistributionPolicy policy)
+    private readonly bool _mergeWithBaseline;
+
+    private DriverLibrary(
+        string root,
+        string manifestPath,
+        DriverManifest manifest,
+        bool embedded,
+        DistributionPolicy policy,
+        bool mergeWithBaseline)
     {
         Root = root;
         ManifestPath = manifestPath;
         Manifest = manifest;
         UsingEmbeddedManifest = embedded;
         Policy = policy;
+        _mergeWithBaseline = mergeWithBaseline;
         Entries = manifest.Entries
             .OrderByDescending(e => e.Priority)
             .ThenBy(e => e.Brand, StringComparer.OrdinalIgnoreCase)
@@ -69,17 +78,25 @@ public sealed class DriverLibrary
 
     public IReadOnlyList<DriverCatalogEntry> Entries { get; private set; }
 
-    /// <summary>重新从磁盘加载清单(写入驱动库或更换策略后刷新视图用)。</summary>
+    /// <summary>重新从磁盘加载清单(写入驱动库或更换策略后刷新视图用)。保持加载模式不变。</summary>
     public void Reload()
     {
-        var reloaded = Load(Root, Policy);
+        var reloaded = Load(Root, Policy, _mergeWithBaseline);
         ManifestPath = reloaded.ManifestPath;
         Manifest = reloaded.Manifest;
         UsingEmbeddedManifest = reloaded.UsingEmbeddedManifest;
         Entries = reloaded.Entries;
     }
 
-    public static DriverLibrary Load(string? rootOverride = null, DistributionPolicy? policy = null)
+    /// <param name="mergeWithBaseline">
+    /// true(默认,生产行为):磁盘清单与随包清单合并,磁盘按「品牌+PDL」覆盖同键条目 ——
+    /// 这样程序升级后新增的品牌/型号一定能生效,同时保留用户导入的驱动包。
+    /// false:只用磁盘清单,把它当作完整世界。适用于企业锁定私有清单的场景,以及单测。
+    /// </param>
+    public static DriverLibrary Load(
+        string? rootOverride = null,
+        DistributionPolicy? policy = null,
+        bool mergeWithBaseline = true)
     {
         policy ??= DistributionPolicy.Default;
         var root = rootOverride ?? ResolveDefaultRoot();
@@ -102,7 +119,18 @@ public sealed class DriverLibrary
                 var manifest = JsonSerializer.Deserialize<DriverManifest>(File.ReadAllText(candidate), Options);
                 if (manifest is { Entries.Count: > 0 })
                 {
-                    return new DriverLibrary(root, candidate, manifest, embedded: false, policy);
+                    if (!mergeWithBaseline)
+                    {
+                        return new DriverLibrary(root, candidate, manifest, embedded: false, policy, mergeWithBaseline);
+                    }
+
+                    // 关键:磁盘清单必须与随包清单【合并】,不能直接覆盖。
+                    // 早期实现是"磁盘有清单就整个替换",导致本机一旦存在旧版清单,
+                    // 后续版本新增的品牌/型号永远不生效
+                    // (实测:随包 50 条,本机旧清单 22 条,新加的 12 个品牌全部不可见)。
+                    var baseline = LoadEmbedded();
+                    var merged = MergeManifests(baseline, manifest);
+                    return new DriverLibrary(root, candidate, merged, embedded: false, policy, mergeWithBaseline);
                 }
             }
             catch (JsonException)
@@ -112,7 +140,35 @@ public sealed class DriverLibrary
         }
 
         var embeddedManifest = LoadEmbedded();
-        return new DriverLibrary(root, $"(内置资源) {EmbeddedManifestName}", embeddedManifest, embedded: true, policy);
+        return new DriverLibrary(root, $"(内置资源) {EmbeddedManifestName}", embeddedManifest, embedded: true, policy, mergeWithBaseline);
+    }
+
+    /// <summary>
+    /// 合并随包清单与本机清单。
+    ///
+    /// 规则:
+    ///   · 以随包清单为【基线】—— 保证程序升级后新增的品牌/型号一定能出现;
+    ///   · 本机清单按「品牌 + PDL」覆盖同键条目 —— 保证用户导入的驱动包、SHA256 与标记不丢。
+    /// </summary>
+    private static DriverManifest MergeManifests(DriverManifest baseline, DriverManifest local)
+    {
+        static string KeyOf(DriverCatalogEntry e) => $"{e.Brand}|{e.Pdl}";
+
+        var localKeys = new HashSet<string>(local.Entries.Select(KeyOf), StringComparer.OrdinalIgnoreCase);
+
+        var merged = new DriverManifest
+        {
+            SchemaVersion = string.IsNullOrWhiteSpace(local.SchemaVersion) ? baseline.SchemaVersion : local.SchemaVersion,
+            LibraryVersion = string.IsNullOrWhiteSpace(local.LibraryVersion)
+                ? baseline.LibraryVersion
+                : $"{baseline.LibraryVersion}+local",
+            Notes = baseline.Notes,
+        };
+
+        merged.Entries.AddRange(baseline.Entries.Where(e => !localKeys.Contains(KeyOf(e))));
+        merged.Entries.AddRange(local.Entries);
+
+        return merged;
     }
 
     /// <summary>按优先级查找默认根目录:环境变量 → 用户目录(在线更新) → 程序目录 → 开发目录。</summary>

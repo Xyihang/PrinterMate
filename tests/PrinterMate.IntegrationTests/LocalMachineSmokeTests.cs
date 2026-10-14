@@ -342,6 +342,27 @@ public class LocalMachineSmokeTests
     }
 
     [Fact]
+    public void 本机生效的清单必须包含随包新增品牌()
+    {
+        // 回归用例:本机早期播种过一份 22 条的旧清单,而"磁盘清单直接覆盖随包清单"
+        // 会让程序升级后新增的 12 个品牌永远不可见。修复后两者必须合并。
+        var library = DriverLibrary.Load();
+
+        _output.WriteLine($"驱动库根目录:{library.Root}");
+        _output.WriteLine($"清单文件    :{library.ManifestPath}");
+        _output.WriteLine($"清单版本    :{library.Manifest.LibraryVersion}");
+        _output.WriteLine($"条目/品牌   :{library.Entries.Count} / {library.Brands.Count}");
+        _output.WriteLine($"品牌        :{string.Join(", ", library.Brands)}");
+
+        foreach (var brand in new[] { "Xerox", "Zebra", "HPRT", "Gprinter", "Xprinter", "Aurora", "Star Micronics" })
+        {
+            Assert.Contains(brand, library.Brands);
+        }
+
+        Assert.True(library.Entries.Count >= 45, $"条目数过少:{library.Entries.Count}");
+    }
+
+    [Fact]
     public void 白名单与审计日志_在本机可正常初始化()
     {
         var allowlist = DownloadSourceAllowlist.Default;

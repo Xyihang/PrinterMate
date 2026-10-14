@@ -745,7 +745,10 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
 
     public bool HasMissingPackages => MissingPackages.Count > 0;
 
-    public string MissingHeader => $"以下 {MissingPackages.Count} 条驱动当前不可直接安装(需要补齐驱动包或改用在线源):";
+    public string MissingHeader => MissingPackages.Count == 0
+        ? string.Empty
+        : $"以下 {MissingPackages.Count} 条:程序已经认出该用哪个驱动,只是驱动包还没入库。"
+          + "把驱动包放进来(「在线补齐」或「选择本地驱动包…」),它们会立刻变成可用 —— 可以当成一份待办清单。";
 
     public bool IsBusy
     {
