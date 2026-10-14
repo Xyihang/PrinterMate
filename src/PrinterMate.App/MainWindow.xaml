@@ -130,38 +130,60 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 顶部状态条:左侧当前操作,右侧结果与建议 -->
-        <Border Grid.Row="0" Background="{StaticResource Brush.HeaderBar}" Padding="12,8">
+        <!-- 顶部信息条(TASK-009):级别图标 + 当前操作 + 结果 + 建议。
+             三行纵向排布 —— 横向并排会让结果文本拿到无限宽度而不换行,长文本会撑破布局。
+             三种级别以图标与文字颜色区分;无建议时该行不占位。 -->
+        <Border Grid.Row="0"
+                Background="{StaticResource Brush.Surface}"
+                BorderBrush="{StaticResource Brush.Border}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="260"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0"
-                           Text="{Binding OperationText}"
-                           Foreground="White"
-                           FontWeight="Bold"
-                           TextWrapping="Wrap"
-                           VerticalAlignment="Top"/>
+                <Path Grid.Column="0"
+                      Width="18" Height="18"
+                      Stretch="Uniform"
+                      VerticalAlignment="Top"
+                      Margin="0,2,12,0"
+                      Fill="{Binding Level, Converter={StaticResource StatusLevelBrush}}">
+                    <Path.Style>
+                        <Style TargetType="Path">
+                            <Setter Property="Data" Value="{StaticResource Icon.Info}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Level}" Value="Success">
+                                    <Setter Property="Data" Value="{StaticResource Icon.Check}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Level}" Value="Warning">
+                                    <Setter Property="Data" Value="{StaticResource Icon.Warning}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Level}" Value="Error">
+                                    <Setter Property="Data" Value="{StaticResource Icon.Error}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Path.Style>
+                </Path>
 
-                <TextBlock Grid.Row="0" Grid.Column="1"
-                           Text="{Binding ResultText}"
-                           Foreground="{Binding Level, Converter={StaticResource StatusLevelBrush}}"
-                           Background="White"
-                           Padding="8,3"
-                           TextWrapping="Wrap"/>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding OperationText}"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource Brush.TextPrimary}"/>
 
-                <TextBlock Grid.Row="1" Grid.Column="1"
-                           Text="{Binding SuggestionText}"
-                           Foreground="{StaticResource Brush.HeaderTextAccent}"
-                           TextWrapping="Wrap"
-                           Margin="0,4,0,0"
-                           Visibility="{Binding HasSuggestion, Converter={StaticResource BoolToVisibility}}"/>
+                    <TextBlock Text="{Binding ResultText}"
+                               TextWrapping="Wrap"
+                               Margin="0,3,0,0"
+                               Foreground="{Binding Level, Converter={StaticResource StatusLevelBrush}}"/>
+
+                    <TextBlock Text="{Binding SuggestionText}"
+                               Style="{StaticResource Hint}"
+                               Margin="0,4,0,0"
+                               Visibility="{Binding HasSuggestion, Converter={StaticResource BoolToVisibility}}"/>
+                </StackPanel>
             </Grid>
         </Border>
 
