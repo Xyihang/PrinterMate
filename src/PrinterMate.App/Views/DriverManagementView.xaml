@@ -104,12 +104,9 @@
                         <WrapPanel Margin="0,6,0,0">
                             <Button Content="查看厂商官方页 / 许可条款" Margin="0,0,10,0"
                                     Command="{Binding OpenVendorPageCommand}"/>
-                            <CheckBox VerticalAlignment="Center"
-                                      IsChecked="{Binding LicenseAccepted}"
-                                      Content="我已阅读并接受该厂商的许可条款(勾选后才能下载)"/>
                         </WrapPanel>
-                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{StaticResource Brush.Warning}"
-                                   Text="说明:厂商驱动的许可条款是给最终用户的,程序不会替你接受。勾选动作与时间会写入审计日志,作为凭据。"/>
+                        <!-- 许可条款的确认已集中到【启动协议】:启动时一次性同意即视为接受全部条款并解锁完整功能,
+                             因此这里不再放置勾选框。(变更依据:使用者 2026-10-14 的明确要求) -->
                     </StackPanel>
 
                     <WrapPanel Margin="0,8,0,0">

@@ -182,7 +182,7 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
 
         SearchOnlineCommand = new AsyncRelayCommand(() => SearchOnlineAsync(), () => !OnlineBusy);
         OpenCatalogCommand = new RelayCommand(OpenCatalog);
-        DownloadOnlineCommand = new AsyncRelayCommand(() => DownloadOnlineAsync(), () => !OnlineBusy && SelectedOnlineCandidate is not null && LicenseAccepted);
+        DownloadOnlineCommand = new AsyncRelayCommand(() => DownloadOnlineAsync(), () => !OnlineBusy && SelectedOnlineCandidate is not null);
         ExtractOnlineCommand = new AsyncRelayCommand(() => ExtractOnlineAsync(), () => !OnlineBusy && _downloadedPackagePath is not null);
         ImportOnlineCommand = new AsyncRelayCommand(() => ImportOnlineAsync(), () => !OnlineBusy && _package is not null);
         PickLocalPackageCommand = new RelayCommand(PickLocalPackage, () => !OnlineBusy);
@@ -247,9 +247,12 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
     public AsyncRelayCommand ImportFolderCommand { get; }
 
     /// <summary>
-    /// 使用者是否已显式确认"已阅读并接受该厂商的许可条款"。
-    /// 驱动下载按钮在勾选前保持禁用 —— 厂商许可是给最终用户的,程序不能替他接受。
-    /// 换取候选(可能换品牌)时自动重置。
+    /// 使用者是否已阅读并接受该厂商的许可条款。
+    ///
+    /// 变更说明(按使用者 2026-10-14 的最新要求):
+    ///   许可确认原先是"逐品牌下载时勾选"的门控,现按使用者要求集中到【启动协议】:
+    ///   启动时一次性同意即视为接受全部条款,并解锁完整功能。
+    ///   因此本属性不再是下载按钮的启用条件,仅保留用于界面提示。
     /// </summary>
     public bool LicenseAccepted
     {
@@ -308,8 +311,6 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         {
             if (SetProperty(ref _onlineBrand, value))
             {
-                // 换品牌 = 换厂商 = 必须重新确认该厂商的许可条款
-                LicenseAccepted = false;
                 OnPropertyChanged(nameof(LicenseBrandText));
                 OnPropertyChanged(nameof(OfficialPageUrl));
             }
@@ -351,8 +352,6 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
         {
             if (SetProperty(ref _selectedOnlineCandidate, value))
             {
-                // 换了候选(可能换了品牌)就必须重新确认该厂商的许可条款
-                LicenseAccepted = false;
                 OnPropertyChanged(nameof(LicenseBrandText));
                 OnPropertyChanged(nameof(OfficialPageUrl));
                 OnPropertyChanged(nameof(HasSelectedOnlineCandidate));
@@ -602,12 +601,12 @@ public sealed class DriverManagementViewModel : ObservableObject, IActivatable
             };
         });
 
-        // 记下"使用者已显式接受该厂商许可条款",作为合规凭据写入审计日志。
-        // 厂商许可是给最终用户的,程序不能替他接受,所以这一步必须由勾选触发并留痕。
-        _online.RecordLicenseAcceptance(
-            string.IsNullOrWhiteSpace(OnlineBrand) ? "(未知厂商)" : OnlineBrand,
-            candidate.Url,
-            OfficialPageUrl);
+        // 记下本次下载涉及的厂商,作为审计留痕。
+        // 注意:许可条款的接受已集中到启动协议(App.Startup.AgreementWindow),
+        // 不再在此处声称"使用者此刻接受了该厂商条款"。
+        AppLog.Write(
+            "online-download",
+            $"开始下载厂商驱动包:厂商={OnlineBrand};来源={candidate.Url};许可页={OfficialPageUrl}");
 
         try
         {

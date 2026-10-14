@@ -1,0 +1,101 @@
+<Window x:Class="PrinterMate.App.Startup.AgreementWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PrinterMate 用户协议、风险告知与免责声明"
+        Width="820" Height="640"
+        MinWidth="620" MinHeight="460"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
+        ResizeMode="CanResize"
+        FontFamily="{StaticResource Font.Family}">
+    <!-- 启动协议:集中所有告知、风险与免责条款。
+         不同意则程序立即退出;同意后进入主界面并使用完整功能。 -->
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 头部:程序名 + 作者 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="PrinterMate 用户协议、风险告知与免责声明"
+                       FontSize="{StaticResource Font.Size.Title}"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource Brush.TextPrimary}"/>
+            <TextBlock Margin="0,6,0,0"
+                       FontSize="{StaticResource Font.Size.Body}"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Accent}"
+                       Text="Made By Xyihang and DS4.1"/>
+            <TextBlock x:Name="LeadText"
+                       Margin="0,8,0,0"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource Brush.TextSecondary}"/>
+        </StackPanel>
+
+        <!-- 正文:可滚动 -->
+        <Border Grid.Row="1"
+                BorderBrush="{StaticResource Brush.Border}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource Radius.Card}"
+                Background="{StaticResource Brush.SurfaceSunken}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="16,12">
+                <ItemsControl x:Name="SectionList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,14">
+                                <TextBlock Text="{Binding Heading}"
+                                           FontSize="{StaticResource Font.Size.Subtitle}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Foreground="{StaticResource Brush.TextPrimary}"/>
+
+                                <ItemsControl ItemsSource="{Binding Paragraphs}" Margin="0,5,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,0,0,5"
+                                                       LineHeight="22"
+                                                       Foreground="{StaticResource Brush.TextPrimary}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- 底部:确认勾选 + 两个按钮 -->
+        <StackPanel Grid.Row="2" Margin="0,14,0,0">
+            <CheckBox x:Name="AgreeBox"
+                      Content="我已逐条阅读、理解并同意上述全部条款"
+                      Checked="OnAgreeChanged"
+                      Unchecked="OnAgreeChanged"/>
+
+            <TextBlock Margin="0,6,0,0"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource Brush.Warning}"
+                       Text="不同意将无法进入程序:点击「不同意并退出」后程序立即关闭,不会执行任何扫描、安装或联网操作。"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                <Button Content="不同意并退出"
+                        MinWidth="150"
+                        Margin="0,0,10,0"
+                        Click="OnDeclineClick"/>
+                <Button x:Name="AgreeButton"
+                        Style="{StaticResource ButtonPrimary}"
+                        Content="同意并进入"
+                        MinWidth="150"
+                        IsEnabled="False"
+                        Click="OnAgreeClick"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

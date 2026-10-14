@@ -1,0 +1,151 @@
+<Window x:Class="PrinterMate.App.Startup.SplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PrinterMate"
+        Width="560" Height="330"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="{StaticResource Font.Family}">
+
+    <!--
+        启动动画(约 3.5 秒,单击或按任意键可立即跳过)。
+
+        流畅性的关键:所有动画只作用于 Opacity 与 RenderTransform(ScaleX / TranslateY)。
+        这两个属性在渲染线程由 GPU 合成,不会触发 Measure/Arrange,
+        因此不会逐帧重新布局 —— 这是 WPF 里做"流畅"动画的硬要求。
+        反之若去动画 Width/Height/Margin,每帧都会重排,必然掉帧。
+    -->
+    <Window.Resources>
+        <Storyboard x:Key="Intro">
+            <!-- 0.00s:整体淡入 -->
+            <DoubleAnimation Storyboard.TargetName="Root"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.45"/>
+
+            <!-- 0.25s:图标与主标题浮入 -->
+            <DoubleAnimation Storyboard.TargetName="TitleShift"
+                             Storyboard.TargetProperty="Y"
+                             From="22" To="0" Duration="0:0:0.75" BeginTime="0:0:0.25">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="TitleBlock"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.75" BeginTime="0:0:0.25"/>
+
+            <!-- 0.70s:副标题 -->
+            <DoubleAnimation Storyboard.TargetName="TaglineBlock"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.6" BeginTime="0:0:0.7"/>
+
+            <!-- 1.05s:作者行 -->
+            <DoubleAnimation Storyboard.TargetName="AuthorShift"
+                             Storyboard.TargetProperty="Y"
+                             From="10" To="0" Duration="0:0:0.7" BeginTime="0:0:1.05">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="AuthorBlock"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.7" BeginTime="0:0:1.05"/>
+
+            <!-- 0.35s 起进度线匀速铺满 3 秒(ScaleX 而非 Width,不触发重排) -->
+            <DoubleAnimation Storyboard.TargetName="BarScale"
+                             Storyboard.TargetProperty="ScaleX"
+                             From="0" To="1" Duration="0:0:3" BeginTime="0:0:0.35"/>
+
+            <!-- 3.00s:整体淡出,3.5s 收尾 -->
+            <DoubleAnimation Storyboard.TargetName="Root"
+                             Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.5" BeginTime="0:0:3"/>
+        </Storyboard>
+    </Window.Resources>
+
+    <Border x:Name="Root"
+            Opacity="0"
+            CornerRadius="12"
+            BorderThickness="1"
+            BorderBrush="{StaticResource Brush.Border}"
+            Background="{StaticResource Brush.Surface}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+
+                <!-- 图标 + 程序名(整体做 TranslateY 浮入) -->
+                <StackPanel.RenderTransform>
+                    <TranslateTransform x:Name="TitleShift" Y="22"/>
+                </StackPanel.RenderTransform>
+
+                <StackPanel x:Name="TitleBlock" Opacity="0" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Path Data="{StaticResource Icon.Print}"
+                          Fill="{StaticResource Brush.Accent}"
+                          Width="34" Height="34"
+                          Stretch="Uniform"
+                          VerticalAlignment="Center"
+                          Margin="0,0,14,0"/>
+
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="PrinterMate"
+                                   FontSize="34"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource Brush.TextPrimary}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock x:Name="TaglineBlock"
+                           Opacity="0"
+                           HorizontalAlignment="Center"
+                           Margin="0,10,0,0"
+                           FontSize="{StaticResource Font.Size.Body}"
+                           Foreground="{StaticResource Brush.TextSecondary}"
+                           Text="打印机工具 · 发现 · 驱动安装 · 测试打印"/>
+            </StackPanel>
+
+            <!-- 作者行(独立浮入) -->
+            <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="0,0,0,34">
+                <StackPanel.RenderTransform>
+                    <TranslateTransform x:Name="AuthorShift" Y="10"/>
+                </StackPanel.RenderTransform>
+
+                <TextBlock x:Name="AuthorBlock"
+                           Opacity="0"
+                           HorizontalAlignment="Center"
+                           FontSize="{StaticResource Font.Size.Body}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource Brush.Accent}"
+                           Text="Made By Xyihang and DS4.1"/>
+            </StackPanel>
+
+            <!-- 进度线:轨 + 填充(填充用 ScaleX 铺开) -->
+            <Grid Grid.Row="1" VerticalAlignment="Bottom" Height="3" Margin="0">
+                <Border Background="{StaticResource Brush.Divider}"/>
+                <Border Background="{StaticResource Brush.Accent}"
+                        RenderTransformOrigin="0,0.5">
+                    <Border.RenderTransform>
+                        <ScaleTransform x:Name="BarScale" ScaleX="0"/>
+                    </Border.RenderTransform>
+                </Border>
+            </Grid>
+
+            <!-- 跳过提示 -->
+            <TextBlock Grid.Row="1"
+                       VerticalAlignment="Bottom"
+                       HorizontalAlignment="Right"
+                       Margin="0,0,14,14"
+                       FontSize="{StaticResource Font.Size.Caption}"
+                       Foreground="{StaticResource Brush.TextTertiary}"
+                       Text="单击或按任意键跳过"/>
+        </Grid>
+    </Border>
+</Window>
