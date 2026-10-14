@@ -55,6 +55,27 @@ public sealed class OnlineDriverInstaller
 
     public DriverLibrary Library => _library;
 
+    /// <summary>
+    /// 为一个品牌拼出可用的检索词。
+    ///
+    /// 为什么需要:Microsoft Update Catalog 是短语匹配,用单字 "HP" / "Canon" 检索会返回 0 条。
+    /// 这里取该品牌所有型号模式里最长的固定前缀,拼成「品牌 前缀」,例如
+    /// HP -> "HP LaserJet"、Canon -> "Canon imageCLASS"、Zebra -> "Zebra ZDesigner"。
+    /// 取不到合适前缀时退回品牌名本身。
+    /// </summary>
+    public string BuildBrandQuery(string brand)
+    {
+        var literal = _library.ForBrand(brand)
+            .Where(e => !e.IsInboxDriver)
+            .SelectMany(e => e.ModelPatterns)
+            .Select(p => p.Replace("*", string.Empty).Replace("?", string.Empty).Trim())
+            .Where(p => p.Length >= 3 && !p.Contains(' '))
+            .OrderByDescending(p => p.Length)
+            .FirstOrDefault();
+
+        return string.IsNullOrWhiteSpace(literal) ? brand : $"{brand} {literal}";
+    }
+
     /// <summary>下载目录:%LOCALAPPDATA%\PrinterMate\Downloads</summary>
     public static string DownloadDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -287,7 +308,13 @@ public sealed class OnlineDriverInstaller
 
             try
             {
-                var search = await SearchAsync(brand, null, ct).ConfigureAwait(false);
+                // 只用品牌名检索是不行的:Microsoft Update Catalog 是短语匹配,
+                // 单字 "HP" / "Canon" 会返回 0 条。必须带上一个具体型号关键词,
+                // 这里从该品牌清单条目的 modelPatterns 里取最长的字面量来拼。
+                var query = BuildBrandQuery(brand);
+                progress?.Report($"[{brand}] 检索 Microsoft Update Catalog(关键词:{query})…");
+
+                var search = await SearchAsync(query, null, ct).ConfigureAwait(false);
                 if (!search.IsSuccess || search.Value is null || search.Value.Count == 0)
                 {
                     results.Add(new BatchItemResult(brand, false, search.Message));

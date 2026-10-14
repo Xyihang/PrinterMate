@@ -269,20 +269,65 @@ public sealed class SecureDownloader : IDisposable
         await using (var destination = new FileStream(
             partPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, FileOptions.Asynchronous))
         {
-            var buffer = new byte[BufferSize];
-            int read;
-            while ((read = await source.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
-            {
-                total += read;
-                if (total > MaxBytes)
-                {
-                    var reason = $"下载内容已超过 800 MB 上限,已中止并删除临时文件。";
-                    _audit?.Write("download.size", url, "拒绝", reason, url);
-                    throw new SecurityPolicyException(reason, "请确认下载的是所需的单独组件。");
-                }
+            // 空闲看门狗。
+            //
+            // 为什么必须要有:上面用了 HttpCompletionOption.ResponseHeadersRead,
+            // 此时 HttpClient.Timeout 只覆盖"收到响应头",**不覆盖读响应体**。
+            // 服务器一旦在传输中途停止吐数据,下面的 ReadAsync 会永久阻塞 ——
+            // 既没有超时也不会被取消(实测表现为一个 0 字节的 .part 文件一直挂在那里)。
+            // 这里用"距上次收到数据的间隔"来判定卡死,而不是用总时长,
+            // 避免把正常的大文件慢速下载误杀。
+            var idleTimeout = TimeSpan.FromSeconds(60);
+            var lastDataAt = DateTime.UtcNow;
 
-                await destination.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                progress?.Report(new DownloadCheckpoint(DownloadStage.Downloading, total, $"已接收 {total} 字节"));
+            using var watchdog = new CancellationTokenSource();
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, watchdog.Token);
+
+            using var timer = new Timer(
+                _ =>
+                {
+                    if (DateTime.UtcNow - lastDataAt > idleTimeout)
+                    {
+                        try
+                        {
+                            watchdog.Cancel();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // 已经收尾,忽略
+                        }
+                    }
+                },
+                state: null,
+                dueTime: TimeSpan.FromSeconds(10),
+                period: TimeSpan.FromSeconds(10));
+
+            try
+            {
+                var buffer = new byte[BufferSize];
+                int read;
+                while ((read = await source.ReadAsync(buffer, linked.Token).ConfigureAwait(false)) > 0)
+                {
+                    lastDataAt = DateTime.UtcNow;
+                    total += read;
+                    if (total > MaxBytes)
+                    {
+                        var reason = $"下载内容已超过 800 MB 上限,已中止并删除临时文件。";
+                        _audit?.Write("download.size", url, "拒绝", reason, url);
+                        throw new SecurityPolicyException(reason, "请确认下载的是所需的单独组件。");
+                    }
+
+                    await destination.WriteAsync(buffer.AsMemory(0, read), linked.Token).ConfigureAwait(false);
+                    progress?.Report(new DownloadCheckpoint(DownloadStage.Downloading, total, $"已接收 {total} 字节"));
+                }
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                var reason = $"下载已卡死:{idleTimeout.TotalSeconds:F0} 秒内没有收到任何数据,已中止并删除临时文件。";
+                _audit?.Write("download.idle-timeout", url, "拒绝", reason, url);
+                throw new SecurityPolicyException(
+                    reason,
+                    "请检查网络或代理是否稳定,或稍后重试;也可以改用厂商官网手动下载后用「选择本地驱动包…」导入。");
             }
 
             await destination.FlushAsync(ct).ConfigureAwait(false);
@@ -323,7 +368,7 @@ public sealed class SecureDownloader : IDisposable
 
         return new HttpClient(handler)
         {
-            Timeout = TimeSpan.FromMinutes(30),
+            Timeout = TimeSpan.FromMinutes(2),
         };
     }
 
