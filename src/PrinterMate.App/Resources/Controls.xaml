@@ -375,25 +375,6 @@
         </Setter>
     </Style>
 
-    <!-- ================= 列表与表格(基础字号;完整外观见 TASK-006) ================= -->
-
-    <Style TargetType="ListBox">
-        <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
-        <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
-        <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
-        <Setter Property="Background" Value="{StaticResource Brush.Surface}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-    </Style>
-
-    <Style TargetType="DataGrid">
-        <Setter Property="FontFamily" Value="{StaticResource Font.Family}"/>
-        <Setter Property="FontSize" Value="{StaticResource Font.Size.Body}"/>
-        <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
-        <Setter Property="Background" Value="{StaticResource Brush.Surface}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="RowHeight" Value="34"/>
-    </Style>
+    <!-- 列表与表格的样式见 Resources/DataViews.xaml(TASK-006),此处不再重复定义 -->
 
 </ResourceDictionary>

@@ -14,6 +14,10 @@
                      注意:必须在 Tokens/Icons 之后合并,否则模板会被默认外观覆盖。
                      同时控件样式已从本文件移除,避免两处定义互相覆盖。 -->
                 <ResourceDictionary Source="Resources/Controls.xaml"/>
+                <!-- 数据视图样式层:表格/列表/树(TASK-006)
+                     注意:必须排在 Controls 之后 —— 表头/行/单元格的隐式样式
+                     要能覆盖 Controls 里的容器样式。 -->
+                <ResourceDictionary Source="Resources/DataViews.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <conv:StatusLevelBrushConverter x:Key="StatusLevelBrush"/>
