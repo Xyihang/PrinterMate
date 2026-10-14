@@ -1,0 +1,48 @@
+MIT License
+
+Copyright (c) 2026 PrinterMate contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+IMPORTANT NOTICE REGARDING THIRD-PARTY PRINTER DRIVERS
+(关于第三方打印机驱动的重要声明)
+
+本许可证仅适用于本仓库中的源代码。
+
+本仓库**不包含任何打印机厂商的驱动二进制文件**(INF / CAT / DLL / CAB 等)。
+本软件随发布版本携带的只有一个**元数据清单**(Catalog/drivers.json),
+其中记录厂商名称、型号特征与预期驱动名,用于识别设备并给出指引。
+
+任何打印机驱动的获取与安装,均由使用者本人自行完成并自行承担相应许可义务:
+
+1. 使用者应通过 Microsoft Update Catalog 或打印机厂商官方网站获取驱动;
+2. 使用者应自行阅读并接受相应厂商的最终用户许可协议(EULA);
+3. 使用者安装驱动前,本软件会校验官方公布的 SHA256 与 Authenticode 数字签名;
+   但**签名有效不等于授权使用**,授权范围以厂商许可条款为准。
+
+本仓库中的代码不重新打包、不修改任何厂商驱动文件。
+
+使用者若将本软件(或其修改版)分发给他人,必须确保**不连同任何厂商驱动文件一起分发**。
+本软件把驱动存放在 `%LOCALAPPDATA%\PrinterMate`(用户级目录),
+而非程序目录,以从结构上避免误分发。
+
+ALL PRINTER DRIVER FILES REMAIN THE PROPERTY OF THEIR RESPECTIVE VENDORS
+AND ARE GOVERNED BY THOSE VENDORS' LICENSE TERMS.
